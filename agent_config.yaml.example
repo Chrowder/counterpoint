@@ -2,7 +2,7 @@
 # 把各自的 Agent UUID(设置页右下)和 API Key(创建弹窗只显示一次)贴进来。
 # 代码用 band.config.load_agent_config("bull") 按块名读取(band-sdk 的 import 名是 band)。
 # M0 只需要 echo;M1 再注册 data_steward / bull / chair;其余加功能时再建。
-echo:         {agent_id: "...", api_key: "..."}
+echo:         {agent_id: "", api_key: ""}
 data_steward: {agent_id: "...", api_key: "..."}
 bull:         {agent_id: "...", api_key: "..."}
 bear:         {agent_id: "...", api_key: "..."}

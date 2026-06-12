@@ -10,7 +10,7 @@ import asyncio
 import logging
 
 # band-sdk 1.0.0 起 import 名是 band(官方教程里的 thenvoi 是旧名)
-from band import Agent
+from band import AdapterFeatures, Agent, Emit
 from band.adapters import AnthropicAdapter
 from band.config import load_agent_config
 
@@ -31,9 +31,9 @@ async def main() -> None:
     # AnthropicAdapter 负责注入这些平台工具并在系统提示里教模型使用。
     adapter = AnthropicAdapter(
         model=model_for("echo"),
-        custom_section=ECHO_PROMPT,
-        # 工具调用/思考以 event 形式进房间,方便在 UI 里观察管道是否通
-        enable_execution_reporting=True,
+        prompt=ECHO_PROMPT,
+        # 工具调用以 event 形式进房间,方便在 UI 里观察管道是否通
+        features=AdapterFeatures(emit={Emit.EXECUTION}),
     )
 
     agent_id, api_key = load_agent_config("echo")  # 读项目根目录 agent_config.yaml
