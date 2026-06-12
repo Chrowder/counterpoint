@@ -42,3 +42,6 @@
 - @mention:被 @的才处理;人类看房间全部消息;多 @ = 并行。
 - 动态参与者:list/add/remove participant,运行时可招募。
 - 兄弟 agent 同账号互通;免费档 local/单机(distributed 要付费 memory)。
+- LLM 普通文本输出对房间不可见,必须调 thenvoi_send_message 才算发言;开源模型(DeepSeek 等)遵从度不稳,要把这条放提示词最顶部强调。
+- AnthropicAdapter 默认 max_tokens=4096,长输出(如备忘录工具调用)会被截断且适配器对 stop_reason=max_tokens **静默丢弃**,表现为 agent"想了但没做"——已在 make_adapter 里调到 16384。
+- 每条消息必须至少 @一个人(API 强制);消息处理失败超过重试上限会标记 failed,之后 /next 重新同步可能造成重复处理。
