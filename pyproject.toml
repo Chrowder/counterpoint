@@ -1,0 +1,9 @@
+[project]
+name = "counterpoint"
+version = "0.1.0"
+description = "对抗式多空投研:多个 agent 经 Band 协作产出研究备忘录(非交易系统)"
+requires-python = ">=3.11"
+dependencies = [
+    "band-sdk[anthropic]",
+    "python-dotenv",
+]

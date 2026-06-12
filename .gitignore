@@ -1,0 +1,14 @@
+# 真实凭据,绝不提交(只提交 .example)
+.env
+agent_config.yaml
+
+# 只读参考仓库
+reference/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# macOS
+.DS_Store
