@@ -12,16 +12,17 @@
 | Data Steward | 确定性分发 stub Evidence Pack(无 LLM,零编造),同一条消息 @Bull @Bear = 并行盲评 | ✅ M1 |
 | Bull | 多头研究员(Anthropic 家族),盲评立论 + 逐点反驳,论断必须引用证据编号 | ✅ M1 |
 | Bear | 空头研究员(**非 Anthropic 家族**,经 featherless/OpenAI 兼容端点),与 Bull 跨模型对抗 | ✅ M2 |
-| Chair (PM) | 状态机主持:等齐盲评 → 转发全文交换反驳 → 综合双边备忘录(评级+交锋焦点+分歧记录) | ✅ M1 |
-| Risk Officer | 对结论做风险压测 | M3 |
+| Chair (PM) | 状态机主持:等齐盲评 → 转发全文交换反驳 → 综合双边备忘录 → 守人工签字门 | ✅ M1 |
+| Risk Officer | 对结论做风险压测 | M4 |
 
-流程(M2 实现):
+流程(M3 实现):
 
 ```
 人类 @Chair 研究 X → Chair @Data Steward → Data 贴 Evidence Pack @Bull @Bear @Chair
 → Bull/Bear 并行盲评(Band 可见性保证互相看不到)→ 各自 @Chair 交初论
 → Chair 收齐后转发对方全文,同一条消息 @Bull @Bear 要求逐点反驳(并行)
-→ 收齐反驳 → Chair 综合写备忘录(savememo 落盘 memos/)→ 贴回房间
+→ 收齐反驳 → Chair 综合写备忘录(savememo 落盘 memos/)→ 贴回房间 + 请求签字
+→ 人类回复 APPROVE / REJECT / REVISE → Chair recordsignoff 留痕(备忘录追加签字区块 + audit/signoff.jsonl)
 ```
 
 > 盲评和交换为什么这样做:Band 里 agent 只能看到 @自己的消息——这天然保证了盲评
@@ -57,7 +58,15 @@ uv sync
 @Chair 研究 AAPL
 ```
 
-自动走完整条链,最终 Chair 在房间贴出备忘录,同时落盘 `memos/AAPL-<日期>.md`。
+自动走完整条链,最终 Chair 在房间贴出备忘录(落盘 `memos/AAPL-<日期>.md`)并请求签字。
+你在房间回复决定即过签字门:
+
+```
+@Chair APPROVE 同意结论,但需持续监控 E7/E8 监管风险
+```
+
+决定为 `APPROVE` / `REJECT` / `REVISE` 之一。Chair 会把签字记录追加到备忘录文件,并向
+`audit/signoff.jsonl` 追加一行(append-only)。提交这两者到 git 即形成防篡改的审计时间线。
 
 ### 运行 M0(管道探针)
 
@@ -78,9 +87,10 @@ counterpoint/
     ├── data_steward.py    # 确定性 stub 证据分发(SimpleAdapter,无 LLM)
     ├── bull.py            # 多头研究员(Anthropic)
     ├── bear.py            # 空头研究员(featherless 开源模型,跨家族)
-    └── chair.py           # 主席:状态机主持 + 双边备忘录 + savememo 落盘
+    └── chair.py           # 主席:状态机主持 + 双边备忘录 + savememo 落盘 + 签字门 recordsignoff
 data/evidence/             # stub Evidence Pack(显著标注假数据)
 memos/                     # 备忘录输出(审计留痕,提交进库)
+audit/signoff.jsonl        # 签字门留痕(append-only,运行时生成,提交进库)
 scripts/run_desk.sh        # 一键拉起 4 个 agent
 reference/TradingAgents/   # 只读参考(辩论提示词结构),gitignored
 ```

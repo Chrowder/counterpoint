@@ -30,9 +30,12 @@
 - 配置两文件:`.env`(THENVOI_REST_URL/THENVOI_WS_URL + LLM key + 角色模型路由 BULL_MODEL/BEAR_MODEL…);`agent_config.yaml`(每 agent 的 agent_id+api_key,用 load_agent_config("bull") 取)。两文件都进 .gitignore,只提交 .example。换模型走 env,不改代码。
 
 ## 里程碑与 Done 标准
-- M0 管道:echo agent 进房间,我能 @它它能回 → 通。
-- M1 闭环:Data(stub 假证据)+ Bull + Chair 顺序跑通,产出 markdown 备忘录,全程走 Band。
-- M1 后停下来给我看,再加 Bear/Risk/签字门/真实数据。**绝不一次写完所有 agent。**
+- M0 管道:echo agent 进房间,我能 @它它能回 → 通。✅
+- M1 闭环:Data(stub 假证据)+ Bull + Chair 顺序跑通,产出 markdown 备忘录,全程走 Band。✅
+- M2 对抗:Bear 跨模型(featherless)+ 并行盲评 + 交换反驳 + 双边备忘录。✅
+- M3 签字门:Chair 贴备忘录后请求签字,人类回 APPROVE/REJECT/REVISE,Chair recordsignoff 留痕。✅
+  审计留痕在 `audit/signoff.jsonl`(append-only)+ 备忘录尾部签字区块;权威记录是房间历史 + git 提交。
+- 下一步备选:M4 Risk Officer 压测 / M5 真实数据替换 stub(均为可砍项)。**绝不一次写完所有 agent。**
 
 ## 工作方式
 - 大改动前先给:计划 + 目录 + 依赖,等我确认。增量推进,每里程碑独立跑通再继续。
