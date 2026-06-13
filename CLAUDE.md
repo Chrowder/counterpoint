@@ -35,7 +35,9 @@
 - M2 对抗:Bear 跨模型(featherless)+ 并行盲评 + 交换反驳 + 双边备忘录。✅
 - M3 签字门:Chair 贴备忘录后请求签字,人类回 APPROVE/REJECT/REVISE,Chair recordsignoff 留痕。✅
   审计留痕在 `audit/signoff.jsonl`(append-only)+ 备忘录尾部签字区块;权威记录是房间历史 + git 提交。
-- 下一步备选:M4 Risk Officer 压测 / M5 真实数据替换 stub(均为可砍项)。**绝不一次写完所有 agent。**
+- M5 真实数据:Data Steward 经 Finnhub 拉真实证据(counterpoint/evidence.py,纯函数无 LLM),
+  DATA_SOURCE=finnhub|stub 切换;拉取失败报错中止、绝不退回假数据;pack 快照存 data/evidence/<T>-<日期>.md。✅
+- 下一步备选:M4 Risk Officer 压测(可砍项)。**绝不一次写完所有 agent。**
 
 ## 工作方式
 - 大改动前先给:计划 + 目录 + 依赖,等我确认。增量推进,每里程碑独立跑通再继续。

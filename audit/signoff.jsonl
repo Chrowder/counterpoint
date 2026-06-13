@@ -1,2 +1,4 @@
 {"ts": "2026-06-12T22:21:02", "event": "memo_created", "ticker": "AAPL", "memo_file": "AAPL-2026-06-12.md"}
 {"ts": "2026-06-12T22:21:58", "event": "signed", "ticker": "AAPL", "memo_file": "AAPL-2026-06-12.md", "decision": "APPROVE", "signer": "Chrowder Chen", "comments": ""}
+{"ts": "2026-06-12T23:01:22", "event": "memo_created", "ticker": "AMD", "memo_file": "AMD-2026-06-12.md"}
+{"ts": "2026-06-12T23:02:50", "event": "signed", "ticker": "AMD", "memo_file": "AMD-2026-06-12.md", "decision": "APPROVE", "signer": "Chrowder Chen", "comments": ""}

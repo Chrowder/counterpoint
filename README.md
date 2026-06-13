@@ -9,7 +9,7 @@
 | Agent | 职责 | 状态 |
 |---|---|---|
 | Echo Probe | M0 管道探针:@它它原样回,验证 Band 链路 | ✅ M0 |
-| Data Steward | 确定性分发 stub Evidence Pack(无 LLM,零编造),同一条消息 @Bull @Bear = 并行盲评 | ✅ M1 |
+| Data Steward | 确定性产出 Evidence Pack(无 LLM,零编造):Finnhub 真实数据 / stub 回退,同一条消息 @Bull @Bear = 并行盲评 | ✅ M1·M5 |
 | Bull | 多头研究员(Anthropic 家族),盲评立论 + 逐点反驳,论断必须引用证据编号 | ✅ M1 |
 | Bear | 空头研究员(**非 Anthropic 家族**,经 featherless/OpenAI 兼容端点),与 Bull 跨模型对抗 | ✅ M2 |
 | Chair (PM) | 状态机主持:等齐盲评 → 转发全文交换反驳 → 综合双边备忘录 → 守人工签字门 | ✅ M1 |
@@ -45,7 +45,11 @@ cp agent_config.yaml.example agent_config.yaml    # 填 echo 的 agent_id + api_
 
 ## 运行
 
-前置:在 Band 上注册 **Data Steward**、**Bull**、**Bear**、**Chair** 四个 External Agent(名字照抄,@mention 按名字路由),凭据填进 `agent_config.yaml` 对应块,全部加进 Counterpoint Desk 房间;`.env` 填 `ANTHROPIC_API_KEY`、`FEATHERLESS_API_KEY` 和 `BEAR_MODEL`。
+前置:在 Band 上注册 **Data Steward**、**Bull**、**Bear**、**Chair** 四个 External Agent(名字照抄,@mention 按名字路由),凭据填进 `agent_config.yaml` 对应块,全部加进 Counterpoint Desk 房间;`.env` 填 `ANTHROPIC_API_KEY`、`FEATHERLESS_API_KEY`、`BEAR_MODEL`,以及真实数据用的 `FINNHUB_API_KEY`([finnhub.io](https://finnhub.io) 免费注册)。
+
+> **数据源**:`DATA_SOURCE=finnhub`(默认)拉真实数据;拉取失败/ticker 无效时 Data Steward
+> 报错中止、**不退回假数据**。离线或额度耗尽时可临时设 `DATA_SOURCE=stub` 用 `data/evidence/*.stub.md`。
+> 真实 pack 每次拉取会快照到 `data/evidence/<TICKER>-<日期>.md` 留痕。
 
 ```bash
 uv sync
@@ -82,9 +86,10 @@ uv run python -m counterpoint.agents.echo
 counterpoint/
 ├── config.py              # .env 读取 + 角色→provider/模型路由(换模型改 .env 不改代码)
 ├── runner.py              # 公共启动逻辑(凭据→Agent.create→监听)
+├── evidence.py            # Finnhub 真实数据 → 确定性格式化 Evidence Pack(纯函数,无 LLM)
 └── agents/
     ├── echo.py            # M0 管道探针
-    ├── data_steward.py    # 确定性 stub 证据分发(SimpleAdapter,无 LLM)
+    ├── data_steward.py    # 确定性证据分发(SimpleAdapter,无 LLM):finnhub/stub 切换
     ├── bull.py            # 多头研究员(Anthropic)
     ├── bear.py            # 空头研究员(featherless 开源模型,跨家族)
     └── chair.py           # 主席:状态机主持 + 双边备忘录 + savememo 落盘 + 签字门 recordsignoff
