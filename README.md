@@ -12,16 +12,17 @@
 | Data Steward | 确定性产出 Evidence Pack(无 LLM,零编造):Finnhub 真实数据 / stub 回退,同一条消息 @Bull @Bear = 并行盲评 | ✅ M1·M5 |
 | Bull | 多头研究员(Anthropic 家族),盲评立论 + 逐点反驳,论断必须引用证据编号 | ✅ M1 |
 | Bear | 空头研究员(**非 Anthropic 家族**,经 featherless/OpenAI 兼容端点),与 Bull 跨模型对抗 | ✅ M2 |
-| Chair (PM) | 状态机主持:等齐盲评 → 转发全文交换反驳 → 综合双边备忘录 → 守人工签字门 | ✅ M1 |
-| Risk Officer | 对结论做风险压测 | M4 |
+| Risk Officer | 非方向性红队:压测辩论质量与证据盲区,给改判条件 + 可靠性定级(Anthropic haiku) | ✅ M4 |
+| Chair (PM) | 状态机主持:等齐盲评 → 交换反驳 → 唤醒压测 → 综合双边备忘录 → 守人工签字门 | ✅ M1 |
 
-流程(M3 实现):
+流程(M4 实现):
 
 ```
 人类 @Chair 研究 X → Chair @Data Steward → Data 贴 Evidence Pack @Bull @Bear @Chair
 → Bull/Bear 并行盲评(Band 可见性保证互相看不到)→ 各自 @Chair 交初论
 → Chair 收齐后转发对方全文,同一条消息 @Bull @Bear 要求逐点反驳(并行)
-→ 收齐反驳 → Chair 综合写备忘录(savememo 落盘 memos/)→ 贴回房间 + 请求签字
+→ 收齐反驳 → Chair 转发【证据+完整辩论】@Risk Officer 压测 → Risk @Chair 出压测报告
+→ Chair 综合写备忘录(savememo 落盘 memos/)→ 贴回房间 + 请求签字
 → 人类回复 APPROVE / REJECT / REVISE → Chair recordsignoff 留痕(备忘录追加签字区块 + audit/signoff.jsonl)
 ```
 
@@ -45,7 +46,7 @@ cp agent_config.yaml.example agent_config.yaml    # 填 echo 的 agent_id + api_
 
 ## 运行
 
-前置:在 Band 上注册 **Data Steward**、**Bull**、**Bear**、**Chair** 四个 External Agent(名字照抄,@mention 按名字路由),凭据填进 `agent_config.yaml` 对应块,全部加进 Counterpoint Desk 房间;`.env` 填 `ANTHROPIC_API_KEY`、`FEATHERLESS_API_KEY`、`BEAR_MODEL`,以及真实数据用的 `FINNHUB_API_KEY`([finnhub.io](https://finnhub.io) 免费注册)。
+前置:在 Band 上注册 **Data Steward**、**Bull**、**Bear**、**Risk Officer**、**Chair** 五个 External Agent(名字照抄,@mention 按名字路由),凭据填进 `agent_config.yaml` 对应块,全部加进 Counterpoint Desk 房间;`.env` 填 `ANTHROPIC_API_KEY`、`FEATHERLESS_API_KEY`、`BEAR_MODEL`、`RISK_MODEL`,以及真实数据用的 `FINNHUB_API_KEY`([finnhub.io](https://finnhub.io) 免费注册)。
 
 > **数据源**:`DATA_SOURCE=finnhub`(默认)拉真实数据;拉取失败/ticker 无效时 Data Steward
 > 报错中止、**不退回假数据**。离线或额度耗尽时可临时设 `DATA_SOURCE=stub` 用 `data/evidence/*.stub.md`。
@@ -92,7 +93,8 @@ counterpoint/
     ├── data_steward.py    # 确定性证据分发(SimpleAdapter,无 LLM):finnhub/stub 切换
     ├── bull.py            # 多头研究员(Anthropic)
     ├── bear.py            # 空头研究员(featherless 开源模型,跨家族)
-    └── chair.py           # 主席:状态机主持 + 双边备忘录 + savememo 落盘 + 签字门 recordsignoff
+    ├── risk.py            # 风险官:反应式单发,压测辩论质量与证据盲区(haiku)
+    └── chair.py           # 主席:状态机主持 + 双边备忘录 + 风险压测节 + savememo + 签字门 recordsignoff
 data/evidence/             # stub Evidence Pack(显著标注假数据)
 memos/                     # 备忘录输出(审计留痕,提交进库)
 audit/signoff.jsonl        # 签字门留痕(append-only,运行时生成,提交进库)

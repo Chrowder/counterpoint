@@ -37,7 +37,9 @@
   审计留痕在 `audit/signoff.jsonl`(append-only)+ 备忘录尾部签字区块;权威记录是房间历史 + git 提交。
 - M5 真实数据:Data Steward 经 Finnhub 拉真实证据(counterpoint/evidence.py,纯函数无 LLM),
   DATA_SOURCE=finnhub|stub 切换;拉取失败报错中止、绝不退回假数据;pack 快照存 data/evidence/<T>-<日期>.md。✅
-- 下一步备选:M4 Risk Officer 压测(可砍项)。**绝不一次写完所有 agent。**
+- M4 Risk Officer:非方向性红队,反应式单发——Chair 收齐反驳后转发证据+完整辩论唤醒它,
+  出压测报告(证据盲区排序/改判条件/可靠性定级),Chair 综合进备忘录「风险压测」节。走 haiku。✅
+  至此 5-agent 架构与 6 条硬性约束全部落地。
 
 ## 工作方式
 - 大改动前先给:计划 + 目录 + 依赖,等我确认。增量推进,每里程碑独立跑通再继续。
@@ -50,3 +52,5 @@
 - LLM 普通文本输出对房间不可见,必须调 thenvoi_send_message 才算发言;开源模型(DeepSeek 等)遵从度不稳,要把这条放提示词最顶部强调。
 - AnthropicAdapter 默认 max_tokens=4096,长输出(如备忘录工具调用)会被截断且适配器对 stop_reason=max_tokens **静默丢弃**,表现为 agent"想了但没做"——已在 make_adapter 里调到 16384。
 - 每条消息必须至少 @一个人(API 强制);消息处理失败超过重试上限会标记 failed,之后 /next 重新同步可能造成重复处理。
+- Band 免费档有平台级速率限制:app.band.ai 的 /messages/next 会返回 429(Cloudflare)。诱因是 agent 数 × 每 agent 订阅房间数 × 轮询;清理历史房间到只剩 1 个能显著缓解。一天内跑多轮也会累积触限。
+- 偶发故障:WebSocket 漏一条消息后走 /next resync 补,若此时撞 429 会陷入"Catching up missed message …"死循环(LangGraph/Bear 上见过,Anthropic 适配器未见),自身把 429 打得更凶。解法:重启该 agent,从全新连接经 /context 重新同步待处理消息即可恢复。
