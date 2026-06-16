@@ -4,6 +4,29 @@
 
 > 这是研究/决策支持工具,**不是交易系统**:不下单、不给买卖指令,最终人类签字。仅供教育研究。
 
+## 项目状态
+
+全部规划里程碑完成,5-agent 架构与 6 条硬性约束全部落地,已用 AAPL / AMD / TSLA 真实数据端到端验证。
+
+**里程碑**
+
+| 里程碑 | 交付 |
+|---|---|
+| M0 管道 | echo agent 验证 Band 链路 @mention 往返 |
+| M1 闭环 | Data(stub)+ Bull + Chair 顺序跑通,产出首份 markdown 备忘录 |
+| M2 对抗 | Bear 跨模型(featherless/DeepSeek)+ 并行盲评 + 交换反驳 + 双边备忘录 |
+| M3 签字门 | 人工 APPROVE/REJECT/REVISE + 备忘录签字区块 + `audit/signoff.jsonl` 留痕 |
+| M5 真实数据 | Finnhub 真实证据(概况/基本面/估值/卖方/新闻),失败中止不造假 |
+| M4 风险压测 | Risk Officer 红队:证据盲区排序 + 改判条件 + 可靠性定级 |
+| M6 证据深化 | 加 EPS 与营收/利润率逐季趋势(SEC 10-Q 去累计),填补单点快照盲区 |
+| 质量加固 | 五档评级结构化校验;`tests/` 纯函数单测(`uv run pytest`) |
+
+**6 条硬性约束的落地**
+
+1. 协调层是 Band(全程 @mention 路由,无进程内调用) · 2. Bull/Bear 跨模型家族对抗 ·
+3. 并行盲评(同条消息 @Bull @Bear,Band 可见性天然隔离) · 4. 论断接地到 Evidence Pack、真实数据零编造 ·
+5. 人工签字门 + 审计留痕 · 6. 不实现下单,密钥只进 `.env`/`agent_config.yaml`。
+
 ## Agent 职责
 
 | Agent | 职责 | 状态 |
@@ -58,7 +81,7 @@ cp agent_config.yaml.example agent_config.yaml    # 填 echo 的 agent_id + api_
 
 ```bash
 uv sync
-./scripts/run_desk.sh        # 一键拉起 4 个 agent,Ctrl+C 全部退出
+./scripts/run_desk.sh        # 一键拉起 5 个 agent,Ctrl+C 全部退出
 ```
 
 然后在房间里发:
