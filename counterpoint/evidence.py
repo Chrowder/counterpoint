@@ -14,6 +14,20 @@ FINNHUB_BASE = "https://finnhub.io/api/v1"
 MIN_ITEMS = 5  # 有效证据少于此数视为拉取失败,中止而非凑数
 NEWS_DAYS = 30
 NEWS_MAX = 4
+EARNINGS_MAX = 4   # 盈利趋势取最近几季
+FIN_QUARTERS = 4   # 财报趋势取最近几个季报(10-Q)
+
+# 利润表字段在不同公司的 concept 名略有差异,用 us-gaap 标准名按优先级兜底匹配
+_IC_CONCEPTS = {
+    "revenue": (
+        "us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax",
+        "us-gaap_Revenues",
+        "us-gaap_RevenuesNetOfInterestExpense",
+    ),
+    "gross": ("us-gaap_GrossProfit",),
+    "operating": ("us-gaap_OperatingIncomeLoss",),
+    "net": ("us-gaap_NetIncomeLoss", "us-gaap_ProfitLoss"),
+}
 
 
 class EvidenceError(RuntimeError):
@@ -31,6 +45,14 @@ def _get(client: httpx.Client, path: str, **params) -> object:
     return r.json()
 
 
+def _soft_get(client: httpx.Client, path: str, **params):
+    """增强类端点用:取不到(权限/网络)返回 None,不让整个 pack 失败。"""
+    try:
+        return _get(client, path, **params)
+    except EvidenceError:
+        return None
+
+
 def _num(v, suffix: str = "", scale: float = 1.0, nd: int = 2):
     """把可能为 None 的数值格式化;None → None(调用方据此跳过)。"""
     if v is None:
@@ -44,6 +66,94 @@ def _num(v, suffix: str = "", scale: float = 1.0, nd: int = 2):
 def _join(*parts: str | None) -> str | None:
     kept = [p for p in parts if p]
     return ",".join(kept) if kept else None
+
+
+def _ic_value(ic_items: list, key: str):
+    """从利润表条目里按 concept 优先级取数值,取不到返回 None。"""
+    by_concept = {it.get("concept"): it.get("value") for it in ic_items}
+    for concept in _IC_CONCEPTS[key]:
+        v = by_concept.get(concept)
+        if v is not None:
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                pass
+    return None
+
+
+def _earnings_item(earnings: list) -> list[str]:
+    """近 N 季 实际 vs 预期 EPS + 超预期方向,合成一条趋势证据。"""
+    rows = sorted(
+        [e for e in earnings if e.get("actual") is not None],
+        key=lambda e: (e.get("year", 0), e.get("quarter", 0)),
+    )[-EARNINGS_MAX:]
+    if not rows:
+        return []
+    segs = []
+    for e in rows:
+        seg = f"{e.get('year')}Q{e.get('quarter')} 实际EPS {e.get('actual')}"
+        if e.get("estimate") is not None:
+            seg += f"/预期 {e.get('estimate')}"
+        sp = e.get("surprisePercent")
+        if sp is not None:
+            seg += f"({'超' if sp >= 0 else '逊'}{abs(sp):.1f}%)"
+        segs.append(seg)
+    return [f"(来源: Finnhub /stock/earnings)近 {len(rows)} 季 EPS 实际 vs 预期:" + ";".join(segs) + "。"]
+
+
+_IC_FLOW = ("revenue", "gross", "operating", "net")
+
+
+def _financials_item(reported: dict) -> list[str]:
+    """近 N 个季度的营收与单季利润率趋势,来自真实 SEC 申报(10-Q)。
+
+    关键:10-Q 利润表是**年初至今累计**,需去累计成单季(单季 = 本期累计 − 上一季累计,
+    Q1 即单季);缺上一季无法可靠去累计就跳过,绝不让累计值冒充单季(约束 4 不容失真)。
+    10-K 的 Q4 是全年数,排除。
+    """
+    data = reported.get("data", []) if isinstance(reported, dict) else []
+    ytd: dict[tuple, dict] = {}
+    for rep in data:
+        if rep.get("form") != "10-Q":
+            continue
+        ic = (rep.get("report") or {}).get("ic", [])
+        rev = _ic_value(ic, "revenue")
+        if not rev:
+            continue
+        ytd[(rep.get("year"), rep.get("quarter"))] = {k: _ic_value(ic, k) for k in _IC_FLOW}
+
+    discrete = []
+    for (yr, q) in sorted(ytd):
+        cur = ytd[(yr, q)]
+        if q == 1:
+            d = dict(cur)
+        else:
+            prev = ytd.get((yr, q - 1))
+            if not prev:  # 缺上一季,去累计不可靠,跳过
+                continue
+            d = {
+                k: (cur[k] - prev[k]) if cur.get(k) is not None and prev.get(k) is not None else None
+                for k in _IC_FLOW
+            }
+        d["label"] = f"{yr}Q{q}"
+        discrete.append(d)
+
+    segs = []
+    for d in discrete[-FIN_QUARTERS:]:
+        rev = d.get("revenue")
+        if not rev or rev <= 0:
+            continue
+        seg = f"{d['label']} 营收 ${rev / 1e9:.2f}B"
+        if d.get("gross") is not None:
+            seg += f"、毛利率 {d['gross'] / rev * 100:.1f}%"
+        if d.get("operating") is not None:
+            seg += f"、营业利润率 {d['operating'] / rev * 100:.1f}%"
+        if d.get("net") is not None:
+            seg += f"、净利率 {d['net'] / rev * 100:.1f}%"
+        segs.append(seg)
+    if len(segs) < 2:  # 不足两季不成趋势
+        return []
+    return ["(来源: Finnhub /stock/financials-reported, SEC 10-Q,已去累计为单季)逐季趋势:" + ";".join(segs) + "。"]
 
 
 def build_pack(ticker: str) -> tuple[str, str]:
@@ -64,13 +174,19 @@ def build_pack(ticker: str) -> tuple[str, str]:
         rec = _get(c, "/stock/recommendation", symbol=ticker) or []
         frm = (date.today() - timedelta(days=NEWS_DAYS)).isoformat()
         news = _get(c, "/company-news", symbol=ticker, **{"from": frm, "to": today}) or []
+        # 时间序列(增强项,取不到则跳过,不影响主 pack)
+        earnings = _soft_get(c, "/stock/earnings", symbol=ticker) or []
+        reported = _soft_get(c, "/stock/financials-reported", symbol=ticker, freq="quarterly") or {}
 
     name = profile.get("name", ticker)
     src_meta = f"Finnhub /stock/metric, 拉取 {today}"
     src_quote = f"Finnhub /quote, 拉取 {today}"
 
-    # (板块, 正文带来源) —— 仅在底层字段非空时加入
-    sections: dict[str, list[str]] = {"公司概况": [], "基本面": [], "估值与市场": [], "卖方观点": [], "风险与新闻": []}
+    # (板块, 正文带来源) —— 仅在底层字段非空时加入。"盈利与财报趋势"承载时间序列证据。
+    sections: dict[str, list[str]] = {
+        "公司概况": [], "基本面": [], "盈利与财报趋势": [],
+        "估值与市场": [], "卖方观点": [], "风险与新闻": [],
+    }
 
     # 公司概况
     cap_b = _num(profile.get("marketCapitalization"), "B", scale=1 / 1000, nd=1)
@@ -100,6 +216,10 @@ def build_pack(ticker: str) -> tuple[str, str]:
     )
     if margins:
         sections["基本面"].append(f"(来源: {src_meta})盈利能力(TTM):{margins}。")
+
+    # 盈利与财报趋势(时间序列,填补单点快照无法判断趋势的盲区)
+    sections["盈利与财报趋势"].extend(_earnings_item(earnings))
+    sections["盈利与财报趋势"].extend(_financials_item(reported))
 
     # 估值与市场
     price = _num(quote.get("c"), nd=2)

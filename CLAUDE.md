@@ -40,6 +40,10 @@
 - M4 Risk Officer:非方向性红队,反应式单发——Chair 收齐反驳后转发证据+完整辩论唤醒它,
   出压测报告(证据盲区排序/改判条件/可靠性定级),Chair 综合进备忘录「风险压测」节。走 haiku。✅
   至此 5-agent 架构与 6 条硬性约束全部落地。
+- M6 证据深化:evidence.py 加时间序列——/stock/earnings(近4季 EPS 实际vs预期)+
+  /stock/financials-reported(SEC 10-Q,**去累计成单季**营收/利润率趋势)。填上"单点快照无法判趋势"的盲区。
+  Finnhub 免费档:earnings/financials-reported 可用;financials(规整版)/price-target/eps-estimate/news-sentiment 是 403 付费。
+  注意:10-Q 利润表是年初至今累计,必须去累计(单季=本期−上一季,Q1即单季)才能当季度趋势用,否则失真。✅
 
 ## 工作方式
 - 大改动前先给:计划 + 目录 + 依赖,等我确认。增量推进,每里程碑独立跑通再继续。

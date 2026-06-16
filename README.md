@@ -51,6 +51,10 @@ cp agent_config.yaml.example agent_config.yaml    # 填 echo 的 agent_id + api_
 > **数据源**:`DATA_SOURCE=finnhub`(默认)拉真实数据;拉取失败/ticker 无效时 Data Steward
 > 报错中止、**不退回假数据**。离线或额度耗尽时可临时设 `DATA_SOURCE=stub` 用 `data/evidence/*.stub.md`。
 > 真实 pack 每次拉取会快照到 `data/evidence/<TICKER>-<日期>.md` 留痕。
+>
+> Evidence Pack 含:概况 / 基本面(TTM)/ **盈利与财报逐季趋势**(近 4 季 EPS 实际vs预期、
+> 营收与单季利润率,后者从 SEC 10-Q 去累计而来)/ 估值 / 卖方评级 / 标题点名公司的新闻。
+> 付费端点(目标价、盈利预期、新闻情绪)免费档不可用,未接入。
 
 ```bash
 uv sync
@@ -87,7 +91,7 @@ uv run python -m counterpoint.agents.echo
 counterpoint/
 ├── config.py              # .env 读取 + 角色→provider/模型路由(换模型改 .env 不改代码)
 ├── runner.py              # 公共启动逻辑(凭据→Agent.create→监听)
-├── evidence.py            # Finnhub 真实数据 → 确定性格式化 Evidence Pack(纯函数,无 LLM)
+├── evidence.py            # Finnhub 真实数据 → 确定性格式化 Evidence Pack(纯函数,无 LLM);含 EPS/财报逐季趋势
 └── agents/
     ├── echo.py            # M0 管道探针
     ├── data_steward.py    # 确定性证据分发(SimpleAdapter,无 LLM):finnhub/stub 切换
