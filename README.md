@@ -99,6 +99,7 @@ counterpoint/
     ├── bear.py            # 空头研究员(featherless 开源模型,跨家族)
     ├── risk.py            # 风险官:反应式单发,压测辩论质量与证据盲区(haiku)
     └── chair.py           # 主席:状态机主持 + 双边备忘录 + 风险压测节 + savememo + 签字门 recordsignoff
+tests/                     # 纯函数单测(去累计/ticker抽取/评级校验/签字),uv run pytest
 data/evidence/             # stub Evidence Pack(显著标注假数据)
 memos/                     # 备忘录输出(审计留痕,提交进库)
 audit/signoff.jsonl        # 签字门留痕(append-only,运行时生成,提交进库)

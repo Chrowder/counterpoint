@@ -9,3 +9,12 @@ dependencies = [
     "python-dotenv",
     "httpx>=0.24.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]          # 不收集 reference/ 下第三方测试
+pythonpath = ["."]             # 让测试能 import counterpoint(项目未装包)
