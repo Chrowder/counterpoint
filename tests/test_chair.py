@@ -25,7 +25,7 @@ def _audit_lines(audit_path):
 
 def test_save_memo_valid_rating(tmp_dirs):
     memos, audit = tmp_dirs
-    out = chair.save_memo(chair.SaveMemoInput(ticker="aapl", rating="overweight", memo_markdown="# m"))
+    out = chair.save_memo(chair.SaveMemoInput(ticker="aapl", rating="overweight", summary="s", memo_markdown="# m"))
     assert "评级 Overweight" in out  # 大小写已归一化
     files = list(memos.glob("AAPL-*.md"))
     assert len(files) == 1 and files[0].read_text() == "# m"
@@ -35,14 +35,14 @@ def test_save_memo_valid_rating(tmp_dirs):
 
 def test_save_memo_invalid_rating_rejected(tmp_dirs):
     memos, _ = tmp_dirs
-    out = chair.save_memo(chair.SaveMemoInput(ticker="AAPL", rating="StrongBuy", memo_markdown="# m"))
+    out = chair.save_memo(chair.SaveMemoInput(ticker="AAPL", rating="StrongBuy", summary="s", memo_markdown="# m"))
     assert "评级无效" in out
     assert list(memos.glob("*.md")) == []  # 非法评级不落盘
 
 
 def test_record_signoff_appends_block_and_audits(tmp_dirs):
     memos, audit = tmp_dirs
-    chair.save_memo(chair.SaveMemoInput(ticker="AAPL", rating="Hold", memo_markdown="# m"))
+    chair.save_memo(chair.SaveMemoInput(ticker="AAPL", rating="Hold", summary="s", memo_markdown="# m"))
     out = chair.record_signoff(
         chair.RecordSignoffInput(ticker="AAPL", decision="approve", signer="Chrowder Chen", comments="关注 E7")
     )
@@ -56,7 +56,7 @@ def test_record_signoff_appends_block_and_audits(tmp_dirs):
 
 def test_record_signoff_invalid_decision(tmp_dirs):
     memos, _ = tmp_dirs
-    chair.save_memo(chair.SaveMemoInput(ticker="AAPL", rating="Hold", memo_markdown="# m"))
+    chair.save_memo(chair.SaveMemoInput(ticker="AAPL", rating="Hold", summary="s", memo_markdown="# m"))
     out = chair.record_signoff(chair.RecordSignoffInput(ticker="AAPL", decision="maybe", signer="X"))
     assert "决定无效" in out
 

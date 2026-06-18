@@ -44,6 +44,10 @@
   /stock/financials-reported(SEC 10-Q,**去累计成单季**营收/利润率趋势)。填上"单点快照无法判趋势"的盲区。
   Finnhub 免费档:earnings/financials-reported 可用;financials(规整版)/price-target/eps-estimate/news-sentiment 是 403 付费。
   注意:10-Q 利润表是年初至今累计,必须去累计(单季=本期−上一季,Q1即单季)才能当季度趋势用,否则失真。✅
+- M7 跨运行记忆(recall 半场):counterpoint/memory.py 读 audit/signoff.jsonl 渲染本台往期决策;
+  Chair 写备忘录前调 recallmemory,备忘录加「往期对比」节;savememo 加 summary 入记忆。
+  **只喂 Chair 不喂 Bull/Bear**——防锚定,保住盲评独立(约束 3)。reflection(结果出来复盘)留作后续。✅
+- supervise.py 看门狗:resync 死循环(同一 id 连续 catch-up≥30)自动重启 agent;run_desk.sh 已套上。
 
 ## 工作方式
 - 大改动前先给:计划 + 目录 + 依赖,等我确认。增量推进,每里程碑独立跑通再继续。

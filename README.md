@@ -19,7 +19,8 @@
 | M5 真实数据 | Finnhub 真实证据(概况/基本面/估值/卖方/新闻),失败中止不造假 |
 | M4 风险压测 | Risk Officer 红队:证据盲区排序 + 改判条件 + 可靠性定级 |
 | M6 证据深化 | 加 EPS 与营收/利润率逐季趋势(SEC 10-Q 去累计),填补单点快照盲区 |
-| 质量加固 | 五档评级结构化校验;`tests/` 纯函数单测(`uv run pytest`) |
+| M7 跨运行记忆 | 重研究同一 ticker 时,Chair recall 本台往期评级/签字/论点,备忘录加「往期对比」(只喂 Chair,防锚定) |
+| 质量加固 | 五档评级结构化校验;Bear resync 死循环看门狗自愈;`tests/` 纯函数单测(`uv run pytest`) |
 
 **6 条硬性约束的落地**
 
@@ -115,6 +116,8 @@ counterpoint/
 ├── config.py              # .env 读取 + 角色→provider/模型路由(换模型改 .env 不改代码)
 ├── runner.py              # 公共启动逻辑(凭据→Agent.create→监听)
 ├── evidence.py            # Finnhub 真实数据 → 确定性格式化 Evidence Pack(纯函数,无 LLM);含 EPS/财报逐季趋势
+├── memory.py              # 跨运行记忆 recall:读 audit 渲染本台往期决策(只喂 Chair)
+├── supervise.py           # agent 看门狗:resync 死循环自动重启
 └── agents/
     ├── echo.py            # M0 管道探针
     ├── data_steward.py    # 确定性证据分发(SimpleAdapter,无 LLM):finnhub/stub 切换
