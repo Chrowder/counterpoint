@@ -47,7 +47,7 @@ The fixture was captured from a real room via `desk.room_messages` (Chair key) a
 New panels: a **pipeline progress timeline** (`/api/progress` derives stages from Band room messages),
 a **native Band room live stream** (`/api/room` — Band sets `X-Frame-Options: SAMEORIGIN` so it can't be iframed; we read messages and render them ourselves), memo markdown rendering, a rating pill, and the sign-off gate.
 
-> Note: the bundled `fixtures/demo.json` is a Chinese transcript, so demo mode shows Chinese memo content regardless of the UI language. An English demo would need a re-captured English fixture.
+> The bundled `fixtures/demo.json` is an **English** NVDA session, rebuilt from a real end-to-end run (`data/rooms/NVDA.json` + `memos/NVDA-*.md`). To refresh it, run a real round, then assemble `{ticker, rating, messages, memo_markdown}` from the room snapshot + memo (strip the sign-off block). The same file is mirrored to `ui/src/demo-fixture.json` for the client-side demo.
 
 ## Deploy the demo to Vercel (pure static, no backend)
 
