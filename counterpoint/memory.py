@@ -41,6 +41,9 @@ def _runs_for(ticker: str, entries: list[dict]) -> list[dict]:
             run = {
                 "date": str(e.get("ts", ""))[:10],
                 "rating": e.get("rating"),
+                # M8 起拆成 thesis + kill_criteria;旧记录只有合并的 summary,回落兼容
+                "thesis": e.get("thesis", ""),
+                "kill_criteria": e.get("kill_criteria", ""),
                 "summary": e.get("summary", ""),
                 "decision": None,
                 "comments": "",
@@ -66,6 +69,10 @@ def recall(ticker: str, audit_path: Path | None = None) -> str:
             sign = f"签字 {r['decision']}" + (f"(意见:{r['comments']})" if r["comments"] else "")
         else:
             sign = "未签字"
-        thesis = f" · 论点:{r['summary']}" if r["summary"] else ""
-        lines.append(f"- {r['date']} · 评级 {r['rating'] or '—'} · {sign}{thesis}")
+        lines.append(f"- {r['date']} · 评级 {r['rating'] or '—'} · {sign}")
+        thesis = r["thesis"] or r["summary"]  # 旧记录回落到合并的 summary
+        if thesis:
+            lines.append(f"  - 论点:{thesis}")
+        if r["kill_criteria"]:
+            lines.append(f"  - 当时的改判条件(供复盘):{r['kill_criteria']}")
     return "\n".join(lines) + "\n"

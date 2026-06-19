@@ -32,6 +32,25 @@ def test_recall_pairs_memo_and_signoff(tmp_path):
     assert "非证据" in out  # 接地纪律提示在标题里
 
 
+def test_recall_renders_thesis_and_kill_criteria(tmp_path):
+    """M8 新格式:thesis 与 kill_criteria 分列,复盘要能读到改判条件。"""
+    p = _write(tmp_path, [{"event": "memo_created", "ticker": "AMD", "ts": "2026-06-16T00:00:00",
+                           "memo_file": "AMD-2026-06-16.md", "rating": "Hold",
+                           "thesis": "增长强但估值高", "kill_criteria": "①毛利率跌破17%→看空"}])
+    out = memory.recall("AMD", audit_path=p)
+    assert "论点:增长强但估值高" in out
+    assert "当时的改判条件(供复盘):①毛利率跌破17%→看空" in out
+
+
+def test_recall_legacy_summary_fallback(tmp_path):
+    """旧记录只有合并的 summary,thesis 回落到它,仍能复盘。"""
+    p = _write(tmp_path, [{"event": "memo_created", "ticker": "TSLA", "ts": "2026-06-18T00:00:00",
+                           "memo_file": "TSLA-2026-06-18.md", "rating": "Hold",
+                           "summary": "毛利率改善但净利原地;改判:营收续降转看空"}])
+    out = memory.recall("TSLA", audit_path=p)
+    assert "论点:毛利率改善但净利原地;改判:营收续降转看空" in out
+
+
 def test_recall_unsigned_run(tmp_path):
     p = _write(tmp_path, [{"event": "memo_created", "ticker": "NVDA", "ts": "2026-06-10T00:00:00",
                            "memo_file": "NVDA-2026-06-10.md", "rating": "Overweight", "summary": "AI 需求"}])
