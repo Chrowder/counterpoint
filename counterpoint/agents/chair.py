@@ -7,6 +7,9 @@
 Bull/Bear/Risk 互相看不到对方消息(Band mention 可见性),交换与压测都必须由 Chair 转发全文。
 跨运行记忆只喂 Chair、不喂 Bull/Bear——防锚定,保住盲评独立性(约束 3)。
 
+产出语言走 OUTPUT_LANG(zh|en):工具描述/备忘录节标题/签字区块/提示词全部按语言切。
+进程启动时语言固定,模块级 T = pick(_L) 一次解析即可(无需每次调用重选)。
+
 运行:uv run python -m counterpoint.agents.chair
 """
 
@@ -20,6 +23,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from counterpoint.config import make_adapter, model_for
+from counterpoint.i18n import output_lang, pick
 from counterpoint.runner import serve
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,6 +32,79 @@ AUDIT_LOG = ROOT / "audit" / "signoff.jsonl"
 
 VALID_DECISIONS = {"APPROVE", "REJECT", "REVISE"}
 VALID_RATINGS = ["Buy", "Overweight", "Hold", "Underweight", "Sell"]
+
+LANG = output_lang()  # 本进程产出语言,启动即定
+
+# 文案与工具描述(LLM 读 Field/docstring,所以须随语言切)。模块级解析一次。
+_L = {
+    "zh": {
+        # 工具描述(docstring)
+        "savememo_doc": "把研究备忘录保存到本地 memos/ 目录。必须在把备忘录发到房间之前调用。",
+        "recall_doc": "取本研究台对该 ticker 的往期研究记录(评级/签字/论点),写备忘录前调用。",
+        "signoff_doc": "记录人类对备忘录的签字决定(人工签字门)。收到人类的签字回复后调用。",
+        # Field 描述
+        "f_ticker": "股票代码,如 AAPL",
+        "f_rating": "五档评级,精确为 Buy / Overweight / Hold / Underweight / Sell 之一,须与备忘录正文评级一致",
+        "f_thesis": "一句话核心论点(供日后重研究本台时回顾);不含买卖指令",
+        "f_kill": "改判触发条件,逐条写清(如:①若下季毛利率环比跌破 X→转 Underweight;②若…→转 Overweight),"
+        "供日后复盘是否兑现;每条要具体可检验",
+        "f_reflection": "对上次改判条件兑现情况的复盘一行结论(如:上次 Hold;①未触发[E5]②未触发[E5];维持 Hold)。"
+        "本台首次研究该 ticker 则留空",
+        "f_memo": "备忘录完整 markdown 内容",
+        "f_decision": "签字决定,必须是 APPROVE / REJECT / REVISE 之一",
+        "f_signer": "签字人姓名,逐字誊抄自房间里该人类参与者的名字,不得编造",
+        "f_comments": "人类签字消息中除决定关键词(APPROVE/REJECT/REVISE)以外的全部文字,原样填入,"
+        "不要概括或丢弃;仅当消息只有一个决定词、无其他内容时才留空",
+        # 工具返回
+        "rating_invalid": "评级无效:'{raw}'。必须是 {ratings} 之一,请重试。",
+        "memo_saved": "备忘录已保存到 {path}(评级 {rating})。下一步:请求人类对该备忘录签字(APPROVE/REJECT/REVISE)。",
+        "no_history": "无 {ticker} 的往期研究记录(本台首次研究)。",
+        "decision_invalid": "决定无效:'{raw}'。必须是 {decisions} 之一。",
+        "memo_missing": "找不到备忘录 {name},无法签字。请先用 savememo 产出备忘录。",
+        "already_signed": "{name} 已有签字记录,本次跳过(不重复签字)。",
+        "signoff_recorded": "已记录 {signer} 的 {decision} 签字到 {name},并写入审计日志。",
+        # 签字区块
+        "sign_heading": "## 签字记录(人工签字门)",
+        "sign_decision": "决定",
+        "sign_signer": "签字人",
+        "sign_time": "时间",
+        "sign_comments": "意见",
+        "sign_none": "(无)",
+        "sign_footer": "> 此区块为人工签字门留痕;权威记录以本房间消息历史与 git 提交为准。",
+    },
+    "en": {
+        "savememo_doc": "Save the research memo to the local memos/ directory. Must be called BEFORE posting the memo to the room.",
+        "recall_doc": "Retrieve this desk's prior research on the ticker (rating/sign-off/thesis); call before writing the memo.",
+        "signoff_doc": "Record the human's sign-off decision on the memo (human sign-off gate). Call after receiving the human's sign-off reply.",
+        "f_ticker": "Stock ticker, e.g. AAPL",
+        "f_rating": "One of the five ratings, exactly Buy / Overweight / Hold / Underweight / Sell; must match the rating in the memo body",
+        "f_thesis": "One-sentence core thesis (for review when this desk re-researches the name later); no buy/sell instructions",
+        "f_kill": "Kill criteria, written out one by one (e.g. (1) if next quarter's gross margin falls below X QoQ -> move to Underweight; "
+        "(2) if ... -> move to Overweight), so a later run can check whether they were met; each must be specific and verifiable",
+        "f_reflection": "One-line reflection on whether last run's kill criteria were met (e.g. Last: Hold; (1) not triggered [E5] "
+        "(2) not triggered [E5]; maintain Hold). Leave empty if this is the desk's first research on the ticker",
+        "f_memo": "The complete memo markdown content",
+        "f_decision": "Sign-off decision, must be one of APPROVE / REJECT / REVISE",
+        "f_signer": "Signer's name, transcribed verbatim from the human participant's name in the room; do not fabricate",
+        "f_comments": "All text in the human's sign-off message other than the decision keyword (APPROVE/REJECT/REVISE), filled in verbatim; "
+        "do not summarize or drop it; leave empty only when the message contains a single decision word and nothing else",
+        "rating_invalid": "Invalid rating: '{raw}'. Must be one of {ratings}; please retry.",
+        "memo_saved": "Memo saved to {path} (rating {rating}). Next: request the human to sign off on this memo (APPROVE/REJECT/REVISE).",
+        "no_history": "No prior research on {ticker} (this desk's first study).",
+        "decision_invalid": "Invalid decision: '{raw}'. Must be one of {decisions}.",
+        "memo_missing": "Memo {name} not found; cannot sign off. Produce the memo with savememo first.",
+        "already_signed": "{name} already has a sign-off record; skipping (no duplicate sign-off).",
+        "signoff_recorded": "Recorded {signer}'s {decision} sign-off to {name}, and wrote it to the audit log.",
+        "sign_heading": "## Sign-off Record (Human Sign-off Gate)",
+        "sign_decision": "Decision",
+        "sign_signer": "Signer",
+        "sign_time": "Time",
+        "sign_comments": "Comments",
+        "sign_none": "(none)",
+        "sign_footer": "> This block is the human sign-off gate's trail; the authoritative record is this room's message history plus git commits.",
+    },
+}
+T = pick(_L, LANG)
 
 
 def normalize_rating(raw: str) -> str | None:
@@ -51,27 +128,21 @@ def _audit(event: str, **fields) -> None:
 class SaveMemoInput(BaseModel):
     """把研究备忘录保存到本地 memos/ 目录。必须在把备忘录发到房间之前调用。"""
 
-    ticker: str = Field(description="股票代码,如 AAPL")
-    rating: str = Field(
-        description="五档评级,精确为 Buy / Overweight / Hold / Underweight / Sell 之一,须与备忘录正文评级一致"
-    )
-    thesis: str = Field(description="一句话核心论点(供日后重研究本台时回顾);不含买卖指令")
-    kill_criteria: str = Field(
-        description="改判触发条件,逐条写清(如:①若下季毛利率环比跌破 X→转 Underweight;②若…→转 Overweight),"
-        "供日后复盘是否兑现;每条要具体可检验"
-    )
-    reflection: str = Field(
-        default="",
-        description="对上次改判条件兑现情况的复盘一行结论(如:上次 Hold;①未触发[E5]②未触发[E5];维持 Hold)。"
-        "本台首次研究该 ticker 则留空",
-    )
-    memo_markdown: str = Field(description="备忘录完整 markdown 内容")
+    ticker: str = Field(description=T["f_ticker"])
+    rating: str = Field(description=T["f_rating"])
+    thesis: str = Field(description=T["f_thesis"])
+    kill_criteria: str = Field(description=T["f_kill"])
+    reflection: str = Field(default="", description=T["f_reflection"])
+    memo_markdown: str = Field(description=T["f_memo"])
+
+
+SaveMemoInput.__doc__ = T["savememo_doc"]
 
 
 def save_memo(args: SaveMemoInput) -> str:
     rating = normalize_rating(args.rating)
     if rating is None:
-        return f"评级无效:'{args.rating}'。必须是 {' / '.join(VALID_RATINGS)} 之一,请重试。"
+        return T["rating_invalid"].format(raw=args.rating, ratings=" / ".join(VALID_RATINGS))
     MEMOS_DIR.mkdir(exist_ok=True)
     path = memo_path(args.ticker)
     path.write_text(args.memo_markdown, encoding="utf-8")
@@ -83,58 +154,61 @@ def save_memo(args: SaveMemoInput) -> str:
         thesis=args.thesis,
         kill_criteria=args.kill_criteria,
         reflection=args.reflection,
+        lang=LANG,  # 记忆隔离:recall 只回放同语言的往期记录,防中英混语污染
     )
     logging.info("备忘录已保存:%s(评级 %s)", path, rating)
-    return f"备忘录已保存到 {path}(评级 {rating})。下一步:请求人类对该备忘录签字(APPROVE/REJECT/REVISE)。"
+    return T["memo_saved"].format(path=path, rating=rating)
 
 
 class RecallMemoryInput(BaseModel):
     """取本研究台对该 ticker 的往期研究记录(评级/签字/论点),写备忘录前调用。"""
 
-    ticker: str = Field(description="股票代码,如 AAPL")
+    ticker: str = Field(description=T["f_ticker"])
+
+
+RecallMemoryInput.__doc__ = T["recall_doc"]
 
 
 def recall_memory(args: RecallMemoryInput) -> str:
     from counterpoint.memory import recall
 
     out = recall(args.ticker)
-    return out or f"无 {args.ticker.upper()} 的往期研究记录(本台首次研究)。"
+    return out or T["no_history"].format(ticker=args.ticker.upper())
 
 
 class RecordSignoffInput(BaseModel):
     """记录人类对备忘录的签字决定(人工签字门)。收到人类的签字回复后调用。"""
 
-    ticker: str = Field(description="股票代码,如 AAPL")
-    decision: str = Field(description="签字决定,必须是 APPROVE / REJECT / REVISE 之一")
-    signer: str = Field(description="签字人姓名,逐字誊抄自房间里该人类参与者的名字,不得编造")
-    comments: str = Field(
-        default="",
-        description="人类签字消息中除决定关键词(APPROVE/REJECT/REVISE)以外的全部文字,原样填入,"
-        "不要概括或丢弃;仅当消息只有一个决定词、无其他内容时才留空",
-    )
+    ticker: str = Field(description=T["f_ticker"])
+    decision: str = Field(description=T["f_decision"])
+    signer: str = Field(description=T["f_signer"])
+    comments: str = Field(default="", description=T["f_comments"])
+
+
+RecordSignoffInput.__doc__ = T["signoff_doc"]
 
 
 def record_signoff(args: RecordSignoffInput) -> str:
     decision = args.decision.strip().upper()
     if decision not in VALID_DECISIONS:
-        return f"决定无效:'{args.decision}'。必须是 {' / '.join(sorted(VALID_DECISIONS))} 之一。"
+        return T["decision_invalid"].format(raw=args.decision, decisions=" / ".join(sorted(VALID_DECISIONS)))
 
     path = memo_path(args.ticker)
     if not path.exists():
-        return f"找不到备忘录 {path.name},无法签字。请先用 savememo 产出备忘录。"
+        return T["memo_missing"].format(name=path.name)
 
     # 幂等:已签过就不再重复追加(防双击/并发轮询造成重复签字块与审计行)
-    if "## 签字记录(人工签字门)" in path.read_text(encoding="utf-8"):
-        return f"{path.name} 已有签字记录,本次跳过(不重复签字)。"
+    if T["sign_heading"] in path.read_text(encoding="utf-8"):
+        return T["already_signed"].format(name=path.name)
 
     ts = datetime.now().isoformat(timespec="seconds")
     block = (
-        f"\n\n---\n\n## 签字记录(人工签字门)\n\n"
-        f"- **决定**:{decision}\n"
-        f"- **签字人**:{args.signer}\n"
-        f"- **时间**:{ts}\n"
-        f"- **意见**:{args.comments or '(无)'}\n\n"
-        f"> 此区块为人工签字门留痕;权威记录以本房间消息历史与 git 提交为准。\n"
+        f"\n\n---\n\n{T['sign_heading']}\n\n"
+        f"- **{T['sign_decision']}**:{decision}\n"
+        f"- **{T['sign_signer']}**:{args.signer}\n"
+        f"- **{T['sign_time']}**:{ts}\n"
+        f"- **{T['sign_comments']}**:{args.comments or T['sign_none']}\n\n"
+        f"{T['sign_footer']}\n"
     )
     with path.open("a", encoding="utf-8") as f:
         f.write(block)
@@ -148,10 +222,11 @@ def record_signoff(args: RecordSignoffInput) -> str:
         comments=args.comments,
     )
     logging.info("签字已记录:%s by %s → %s", decision, args.signer, path.name)
-    return f"已记录 {args.signer} 的 {decision} 签字到 {path.name},并写入审计日志。"
+    return T["signoff_recorded"].format(signer=args.signer, decision=decision, name=path.name)
 
 
-CHAIR_PROMPT_TEMPLATE = """你是 Counterpoint 投研台的主席(Chair / PM),主持对抗式研究流程、产出研究备忘录、并守人工签字门。
+CHAIR_PROMPT_TEMPLATE = {
+    "zh": """你是 Counterpoint 投研台的主席(Chair / PM),主持对抗式研究流程、产出研究备忘录、并守人工签字门。
 今天的日期是 {today},备忘录标题用这个日期。
 
 ## 流程状态机(严格按序执行,缺谁等谁,绝不跳步)
@@ -225,12 +300,88 @@ Bear 的核心论点 + 反驳后仍站得住的部分,标注 [E*]。
 - 备忘录中每个论断都必须能追溯到 Evidence Pack 的证据编号。
 - 任何一方引用了不存在的编号、或论断超出证据范围,在"局限与缺口"中点名指出。
 - 不下达买卖指令、不给目标价。
-- 签字门:决定与签字人忠实于人类原话,绝不替人类做决定、绝不编造签字人。"""
+- 签字门:决定与签字人忠实于人类原话,绝不替人类做决定、绝不编造签字人。""",
+    "en": """You are the Chair (PM) of the Counterpoint research desk. You run the adversarial research process, produce the research memo, and guard the human sign-off gate.
+Today's date is {today}; use this date in the memo title.
+
+## Process state machine (execute strictly in order; wait for whoever is missing; never skip a step)
+1. **Human starts a research request** (e.g. "research AAPL") -> call thenvoi_send_message to ask the Data Steward
+   for that ticker's Evidence Pack; mentions include Data Steward.
+2. **Data Steward's delivery notice** -> send NO message; wait silently.
+3. **First opening case arrives** (Bull or Bear) -> send NO message; keep waiting for the other.
+4. **Both Bull and Bear opening cases in hand** -> send ONE message with mentions including BOTH Bull and Bear:
+   - For Bull: quote Bear's opening case in full and ask for a point-by-point rebuttal;
+   - For Bear: quote Bull's opening case in full and ask for a point-by-point rebuttal;
+   - Quotes must be complete — no summarizing or trimming (neither can see the other's original message; you are the only relay).
+   - There are {rounds} rebuttal round(s) total; this process does only these {rounds} round(s), then moves to synthesis.
+5. **First rebuttal arrives** -> send NO message; wait for the other.
+6. **Both rebuttals in hand** -> wake the Risk Officer for stress-testing: send ONE message with mentions including Risk Officer,
+   attaching the **full text**: the entire Evidence Pack + Bull opening + Bear opening + Bull rebuttal + Bear rebuttal,
+   asking the Risk Officer to stress-test (they have seen none of it before; you are the only relay — never summarize or trim).
+7. **Risk Officer's stress-test report arrives** -> reflect on prior runs, write the memo, and request sign-off:
+   a. First call the recallmemory tool (pass the ticker) to retrieve this desk's prior records.
+   b. **Reflection**: if the prior record has "kill criteria", judge each one against **this round's current Evidence Pack data** —
+      Triggered / Not triggered / Insufficient data, citing the supporting [E*] for each, and explain what it means for this round's rating. Use this to write the "Prior Comparison & Reflection" section.
+   c. Call the savememo tool to save: ticker, rating (one of the five, matching the body),
+      thesis (one-sentence thesis), kill_criteria (this round's new kill criteria, each specific and verifiable),
+      reflection (one-line reflection on whether last run's criteria were met; leave empty if first study of the ticker), and the full markdown.
+   d. Then call thenvoi_send_message to post the full memo to the room, **appending a sign-off request at the end**:
+      "This memo awaits human sign-off review. Please reply APPROVE / REJECT / REVISE, with optional comments."
+      mentions include the human who made the request.
+8. **Human replies with a sign-off decision** (message contains APPROVE / REJECT / REVISE) ->
+   a. Call the recordsignoff tool:
+      - ticker;
+      - decision: APPROVE / REJECT / REVISE;
+      - signer: transcribe the human participant's name verbatim; do not fabricate;
+      - comments: fill in verbatim **all text in the human's sign-off message other than the decision keyword** (opinions, conditions, reasons, concerns, etc.).
+        e.g. "APPROVE agree with the conclusion, but keep monitoring E7/E8" -> decision=APPROVE, comments="agree with the conclusion, but keep monitoring E7/E8".
+        Leave comments empty only when the message truly contains a single decision word and nothing else. Do not summarize or drop the human's words.
+   b. Then call thenvoi_send_message to confirm, e.g. "✅ Recorded <signer>'s <decision> sign-off; the memo is now in effect / void / pending revision", mentions include that human.
+
+How to judge progress: inspect your conversation history — both Bull and Bear openings present -> time to exchange rebuttals;
+both rebuttals present -> time to wake the Risk Officer; Risk Officer's report received -> time to write the memo.
+Distinguish a "research request" from a "sign-off reply": the latter contains an APPROVE/REJECT/REVISE keyword and occurs after the memo has been posted.
+
+## Memo format (markdown)
+# Research Memo: {{TICKER}} — {today}
+## Rating
+Pick one of the five: Buy / Overweight / Hold / Underweight / Sell, with a one-sentence reason.
+You must take a side after weighing both cases; give Hold only when the two cases are genuinely evenly matched.
+## Bull Case Summary
+Bull's core theses + the parts that still stand after rebuttal, tagged [E*].
+## Bear Case Summary
+Bear's core theses + the parts that still stand after rebuttal, tagged [E*].
+## Points of Contention
+One paragraph per point of contention: each side's view, whose argument is sturdier, and why (judged by quality of evidence reading, not by stance).
+## Explicit Dissents
+For the side the rating did NOT adopt, record its strongest un-refuted point verbatim, noting which side it came from — this is the minority report for the signer.
+## Risk Stress-Test (Risk Officer)
+Summarize the Risk Officer's stress-test: the most critical evidence blind spots (ranked), kill criteria, overall reliability rating;
+and explain how these risks are reflected in the rating caveat above.
+## Prior Comparison & Reflection
+- **Last conclusion**: against recallmemory — what was the prior rating/thesis, and how has it evolved this round.
+- **Kill-criteria reflection**: list last run's kill criteria one by one, judging each against this round's current data as Triggered / Not triggered / Insufficient data (cite [E*] for each),
+  and explain the impact on this round's rating (if triggered, change the rating accordingly; if not, the prior logic still holds).
+- If recallmemory shows a first study, write here: "This desk's first study of the ticker; no prior kill criteria to reflect on."
+**Prior desk views are a continuity reference, NOT evidence — they may not serve as [E*] support nor override current evidence; but the "was it met" judgment MUST be backed by current [E*].**
+## Evidence Reference Table
+| Id | One-line content | How each side used it |
+## Limitations & Gaps
+Questions neither side can answer; blind spots the evidence does not cover (may echo the Risk Officer's blind-spot ranking).
+## Disclaimer
+For education and research only, not investment advice; **this memo must pass the human sign-off gate, and constitutes no basis for any decision until the sign-off record block appears**; evidence sources and fetch time are in the Evidence Pack header.
+
+## Discipline
+- Every claim in the memo must trace back to an evidence id in the Evidence Pack.
+- If either side cited a non-existent id, or made a claim beyond the evidence, call it out by name in "Limitations & Gaps".
+- Issue no buy/sell instructions and no price targets.
+- Sign-off gate: the decision and signer stay faithful to the human's words; never decide for the human, never fabricate a signer.""",
+}
 
 
 def build_prompt() -> str:
     rounds = os.getenv("DEBATE_ROUNDS", "1")
-    return CHAIR_PROMPT_TEMPLATE.format(today=date.today().isoformat(), rounds=rounds)
+    return pick(CHAIR_PROMPT_TEMPLATE, LANG).format(today=date.today().isoformat(), rounds=rounds)
 
 
 if __name__ == "__main__":

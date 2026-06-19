@@ -21,6 +21,7 @@ from pathlib import Path
 from band.core import SimpleAdapter
 
 from counterpoint.evidence import EvidenceError, build_pack
+from counterpoint.i18n import pick
 from counterpoint.runner import serve
 
 EVIDENCE_DIR = Path(__file__).resolve().parents[2] / "data" / "evidence"
@@ -28,11 +29,36 @@ EVIDENCE_DIR = Path(__file__).resolve().parents[2] / "data" / "evidence"
 # Evidence Pack 送达消息:pack 原文 + 给各角色的指令。
 # 文本里的 @名字 是给人类读的;真正的路由靠 send_message 的 mentions 参数。
 # 同一条消息 @Bull @Bear = 并行盲评:两人同时开始,互相看不到对方输出。
-DELIVERY_TEMPLATE = """{pack}
+DELIVERY_TEMPLATE = {
+    "zh": """{pack}
 
 ---
 @Bull @Bear 请各自仅基于以上 Evidence Pack **独立**完成多头/空头分析(你们互相看不到对方的消息),结论发回房间并 @Chair。
-@Chair Evidence Pack 已送达,请等待双方分析结论。"""
+@Chair Evidence Pack 已送达,请等待双方分析结论。""",
+    "en": """{pack}
+
+---
+@Bull @Bear Please each complete your bull/bear analysis **independently**, based ONLY on the Evidence Pack above (you cannot see each other's messages); post your conclusions back to the room and @Chair.
+@Chair The Evidence Pack has been delivered; please wait for both analysts' conclusions.""",
+}
+
+# 无 ticker / stub 缺失 / 真实数据失败的回执文案,按语言选(无 LLM,确定性)
+_MSG = {
+    "zh": {
+        "stub_none": "未识别到可用 ticker。stub 模式当前可用:{avail}",
+        "stub_empty": "(无)",
+        "no_ticker": "未在消息中识别到股票代码(ticker),请用大写代码,如 AAPL。",
+        "fetch_fail": "无法获取 {ticker} 的真实数据:{err}。本轮中止——请检查 ticker 或 "
+        "FINNHUB_API_KEY,或临时切 DATA_SOURCE=stub。",
+    },
+    "en": {
+        "stub_none": "No usable ticker recognized. Currently available in stub mode: {avail}",
+        "stub_empty": "(none)",
+        "no_ticker": "No stock ticker recognized in the message; please use an uppercase symbol, e.g. AAPL.",
+        "fetch_fail": "Could not fetch real data for {ticker}: {err}. Aborting this round — check the "
+        "ticker or FINNHUB_API_KEY, or temporarily switch DATA_SOURCE=stub.",
+    },
+}
 
 ANALYST_MENTIONS = ["Bull", "Bear", "Chair"]
 
@@ -70,13 +96,14 @@ class EvidenceAdapter(SimpleAdapter):
                          *, is_session_bootstrap, room_id) -> None:
         source = os.getenv("DATA_SOURCE", "finnhub").lower()
         requester = msg.sender_name or "Chair"
+        m = pick(_MSG)
 
         if source == "stub":
             found = find_stub(msg.content)
             if found is None:
                 avail = [f.name.split(".")[0] for f in sorted(EVIDENCE_DIR.glob("*.stub.md"))]
                 await tools.send_message(
-                    f"未识别到可用 ticker。stub 模式当前可用:{', '.join(avail) or '(无)'}",
+                    m["stub_none"].format(avail=", ".join(avail) or m["stub_empty"]),
                     mentions=[requester],
                 )
                 return
@@ -84,10 +111,7 @@ class EvidenceAdapter(SimpleAdapter):
         else:
             ticker = extract_ticker(msg.content)
             if not ticker:
-                await tools.send_message(
-                    "未在消息中识别到股票代码(ticker),请用大写代码,如 AAPL。",
-                    mentions=[requester],
-                )
+                await tools.send_message(m["no_ticker"], mentions=[requester])
                 return
             try:
                 ticker, pack = build_pack(ticker)
@@ -96,14 +120,13 @@ class EvidenceAdapter(SimpleAdapter):
                 # 失败报错中止:不 @分析师,绝不用假数据顶替
                 logging.warning("真实数据获取失败:%s", e)
                 await tools.send_message(
-                    f"无法获取 {ticker} 的真实数据:{e}。本轮中止——请检查 ticker 或 FINNHUB_API_KEY,"
-                    f"或临时切 DATA_SOURCE=stub。",
+                    m["fetch_fail"].format(ticker=ticker, err=e),
                     mentions=[requester],
                 )
                 return
 
         logging.info("分发 %s Evidence Pack(来源=%s,@%s)", ticker, source, " @".join(ANALYST_MENTIONS))
-        await tools.send_message(DELIVERY_TEMPLATE.format(pack=pack), mentions=ANALYST_MENTIONS)
+        await tools.send_message(pick(DELIVERY_TEMPLATE).format(pack=pack), mentions=ANALYST_MENTIONS)
 
 
 if __name__ == "__main__":
