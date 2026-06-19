@@ -128,7 +128,9 @@ def signoff(req: SignoffReq):
     msg = record_signoff(
         RecordSignoffInput(ticker=ticker, decision=req.decision, signer=signer, comments=req.comments)
     )
-    ok = "已记录" in msg
+    # 成功与否以审计落痕的事实为准,不靠匹配返回文案(record_signoff 文案随 OUTPUT_LANG 变,
+    # 中英不同——字符串匹配会在英文台误判)。signed=True 含幂等"已签过"的情形,亦算成功。
+    ok = bool(latest_result(ticker).get("signed"))
     return {"ok": ok, "message": msg}
 
 

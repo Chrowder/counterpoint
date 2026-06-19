@@ -1,11 +1,15 @@
 import { motion } from 'framer-motion'
 import RiskPill from './RiskPill.jsx'
+import { t } from '../i18n.js'
 
 // 顶部评分卡:评级 / Risk 可靠性(从备忘录文本尽力提取)/ 证据引用数 / 流程进度。
+// 中英备忘录措辞不同,两套模式都试:中文"可靠性…高/中/低",英文"reliability…High/Medium/Low"。
 function reliabilityFrom(markdown) {
   if (!markdown) return null
-  const m = markdown.match(/可靠性[^\n。]*?(低|中低|中|中高|高|Low|Moderate|High)/)
-  return m ? m[1] : null
+  const zh = markdown.match(/可靠性[^\n。]*?(中低|中高|低|中|高)/)
+  if (zh) return zh[1]
+  const en = markdown.match(/reliabilit[^\n.]*?\b(Low|Medium|Moderate|High)\b/i)
+  return en ? en[1] : null
 }
 function citationCount(markdown) {
   if (!markdown) return 0
@@ -37,13 +41,13 @@ export default function ScoreBar({ result, stages }) {
   return (
     <motion.div className="scorebar" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.1 }}>
-      <Card label="评级">
+      <Card label={t('sc_rating')}>
         {result?.rating ? <div style={{ marginTop: 8 }}><RiskPill rating={result.rating} /></div>
           : <div className="score-value" style={{ fontSize: 20, color: 'var(--text-faint)' }}>—</div>}
       </Card>
-      <Card label="Risk 可靠性" value={reliability || '—'} meta="基于现有证据下结论的可靠性" />
-      <Card label="证据引用" value={cites} meta="备忘录引用的独立证据条数 [E*]" />
-      <Card label="流程进度" value={`${done}/${stages.length}`} meta="盲评→反驳→压测→综合→签字" fill={done / stages.length} />
+      <Card label={t('sc_reliability')} value={reliability || '—'} meta={t('sc_reliability_meta')} />
+      <Card label={t('sc_cites')} value={cites} meta={t('sc_cites_meta')} />
+      <Card label={t('sc_progress')} value={`${done}/${stages.length}`} meta={t('sc_progress_meta')} fill={done / stages.length} />
     </motion.div>
   )
 }

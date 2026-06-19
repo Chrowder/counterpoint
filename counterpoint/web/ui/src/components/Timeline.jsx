@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
+import { t } from '../i18n.js'
 
-const STATUS_LABEL = { done: '已完成', active: '进行中', pending: '待进行' }
+const STATUS_KEY = { done: 'st_done', active: 'st_active', pending: 'st_pending' }
 
 function StageItem({ s, index }) {
   return (
@@ -9,10 +10,10 @@ function StageItem({ s, index }) {
       <div className={`tl-node is-${s.status}`}>{s.status === 'done' ? '✓' : s.step}</div>
       <div className="tl-card">
         <div className="tl-top">
-          <span className="tl-title">{s.title}</span>
-          <span className={`tl-status is-${s.status}`}>{STATUS_LABEL[s.status]}</span>
+          <span className="tl-title">{t(`stage.${s.key}`)}</span>
+          <span className={`tl-status is-${s.status}`}>{t(STATUS_KEY[s.status])}</span>
         </div>
-        <div className="tl-stage-agent">{s.agent}</div>
+        <div className="tl-stage-agent">{t(`agent.${s.key}`)}</div>
       </div>
     </motion.div>
   )
@@ -23,8 +24,8 @@ export default function Timeline({ stages }) {
   return (
     <section className="panel">
       <div className="panel-head">
-        <span className="panel-title"><span className="dot" />流水线进度</span>
-        <span className="panel-tag">{done}/{stages.length} 完成</span>
+        <span className="panel-title"><span className="dot" />{t('tl_title')}</span>
+        <span className="panel-tag">{t('tl_done', { done, total: stages.length })}</span>
       </div>
       <div className="panel-body">
         <div className="timeline">
