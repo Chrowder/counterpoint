@@ -82,7 +82,7 @@ function detectLang() {
   const q = new URLSearchParams(location.search).get('lang');
   if (q === 'zh' || q === 'en') { try { localStorage.setItem('cp_lang', q); } catch {} return q; }
   let s = null; try { s = localStorage.getItem('cp_lang'); } catch {}
-  return s === 'en' ? 'en' : 'zh';
+  return s === 'zh' ? 'zh' : 'en';  // 默认英文
 }
 let LANG = detectLang();
 function t(k, vars) {

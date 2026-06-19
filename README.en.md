@@ -59,13 +59,13 @@ Human @Chair research X → Chair @Data Steward → Data posts the Evidence Pack
 
 ## Language (bilingual zh/en)
 
-Output language is a **config axis**, not a branch: one codebase, switched via `.env`, defaulting to Chinese.
+Output language is a **config axis**, not a branch: one codebase, switched via `.env`, **defaulting to English on this branch**.
 
 ```bash
-OUTPUT_LANG=en ./scripts/run_desk.sh    # start an English desk: memo / debate / evidence pack all in English
+OUTPUT_LANG=zh ./scripts/run_desk.sh    # start a Chinese desk: memo / debate / evidence pack all in Chinese
 ```
 
-`OUTPUT_LANG=zh|en` controls the language of the memo, the bull/bear debate, the Evidence Pack, and the tool descriptions; switching only edits `.env`, never code.
+`OUTPUT_LANG=en|zh` (default en) controls the language of the memo, the bull/bear debate, the Evidence Pack, and the tool descriptions; switching only edits `.env`, never code.
 Only one language at a time (the 5 agents share one Band account). Cross-run memory is isolated by language — an English desk replays only English prior records, never feeding old Chinese conclusions to Chair (avoiding anchoring / mixed-language pollution).
 
 **The web UI language is independent of `OUTPUT_LANG`**: the `EN/中` button at the top right toggles instantly (or `?lang=en`),

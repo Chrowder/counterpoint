@@ -25,8 +25,29 @@ DEMO = os.getenv("WEB_DEMO", "").lower() in ("1", "true", "yes")
 
 STATIC = Path(__file__).resolve().parent / "static"
 STATE_FILE = Path(__file__).resolve().parents[2] / ".web_rooms.json"  # 进行中房间,gitignored
+ROOMS_SNAP_DIR = Path(__file__).resolve().parents[2] / "data" / "rooms"  # 完成后房间快照,gitignored
 
 app = FastAPI(title="Counterpoint Desk")
+
+
+def _snap_path(ticker: str) -> Path:
+    return ROOMS_SNAP_DIR / f"{ticker.upper()}.json"
+
+
+def _save_room_snapshot(ticker: str, messages: list[dict]) -> None:
+    """清场前把房间消息落盘。teardown 后 Chair 被移出房间就读不到消息,/api/room 与
+    /api/progress 会退回空 → 进度从 6/6 跌回 2/6、直播消失。落盘快照后改读它,完成态定格。"""
+    if not messages:
+        return
+    ROOMS_SNAP_DIR.mkdir(parents=True, exist_ok=True)
+    _snap_path(ticker).write_text(json.dumps(messages, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_room_snapshot(ticker: str) -> list[dict]:
+    try:
+        return json.loads(_snap_path(ticker).read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
 
 
 def _load_rooms() -> dict[str, str]:
@@ -85,12 +106,14 @@ def result(ticker: str):
 
 def _messages_for(ticker: str) -> list[dict]:
     room_id = _rooms.get(ticker)
-    if not room_id:
-        return []
-    try:
-        return desk.room_messages(room_id)
-    except Exception:
-        return []  # 房间已清场/网络抖动:返回空,前端按"无消息"处理
+    if room_id:
+        try:
+            live = desk.room_messages(room_id)
+            if live:
+                return live
+        except Exception:
+            pass  # 房间网络抖动:落到快照
+    return _load_room_snapshot(ticker)  # 房间未建/已清场:读完成态快照(没有则空)
 
 
 @app.get("/api/progress/{ticker}")
@@ -140,6 +163,7 @@ def cleanup(ticker: str):
     if DEMO:
         demo.cleanup(ticker)
         return {"ok": True, "room_id": "DEMO"}
+    _save_room_snapshot(ticker, _messages_for(ticker))  # teardown 前定格房间消息
     _started.pop(ticker, None)
     room_id = _rooms.pop(ticker, None)
     if room_id:

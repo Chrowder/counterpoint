@@ -1,4 +1,4 @@
-// 轻量 i18n:locale 由 ?lang= 或 localStorage 决定,默认 zh。无第三方依赖。
+// 轻量 i18n:locale 由 ?lang= 或 localStorage 决定,默认 en(本分支默认英文)。无第三方依赖。
 // UI 语言与后端 OUTPUT_LANG 解耦——界面文案、阶段标题全部前端按 key 映射,
 // 不依赖后端返回的文案(后端文案只供非 UI 消费方/回退)。
 const STR = {
@@ -124,7 +124,7 @@ function detectLang() {
   }
   let saved = null
   try { saved = localStorage.getItem('cp_lang') } catch { /* ignore */ }
-  return saved === 'en' ? 'en' : 'zh'
+  return saved === 'zh' ? 'zh' : 'en'  // 默认英文
 }
 
 export let LANG = detectLang()

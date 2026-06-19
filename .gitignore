@@ -16,8 +16,9 @@ __pycache__/
 # 个人草稿笔记,不进版本控制
 note.md
 
-# web 前端运行时状态(进行中房间)
+# web 前端运行时状态(进行中房间 + 完成后房间快照)
 .web_rooms.json
+data/rooms/
 
 # Vite 前端构建产物与依赖
 counterpoint/web/ui/node_modules/
