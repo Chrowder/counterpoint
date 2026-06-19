@@ -123,6 +123,10 @@ def record_signoff(args: RecordSignoffInput) -> str:
     if not path.exists():
         return f"找不到备忘录 {path.name},无法签字。请先用 savememo 产出备忘录。"
 
+    # 幂等:已签过就不再重复追加(防双击/并发轮询造成重复签字块与审计行)
+    if "## 签字记录(人工签字门)" in path.read_text(encoding="utf-8"):
+        return f"{path.name} 已有签字记录,本次跳过(不重复签字)。"
+
     ts = datetime.now().isoformat(timespec="seconds")
     block = (
         f"\n\n---\n\n## 签字记录(人工签字门)\n\n"

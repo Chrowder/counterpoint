@@ -54,6 +54,18 @@ def test_record_signoff_appends_block_and_audits(tmp_dirs):
     assert rec["event"] == "signed" and rec["decision"] == "APPROVE" and rec["comments"] == "关注 E7"
 
 
+def test_record_signoff_idempotent(tmp_dirs):
+    """重复签字(双击/并发轮询)只追加一次区块、只写一条审计行。"""
+    memos, audit = tmp_dirs
+    chair.save_memo(chair.SaveMemoInput(ticker="AAPL", rating="Hold", thesis="t", kill_criteria="k", memo_markdown="# m"))
+    first = chair.record_signoff(chair.RecordSignoffInput(ticker="AAPL", decision="APPROVE", signer="chrowder"))
+    second = chair.record_signoff(chair.RecordSignoffInput(ticker="AAPL", decision="APPROVE", signer="chrowder"))
+    assert "已记录" in first and "跳过" in second
+    memo = list(memos.glob("AAPL-*.md"))[0].read_text()
+    assert memo.count("## 签字记录(人工签字门)") == 1
+    assert sum(1 for ln in audit.read_text().splitlines() if '"signed"' in ln) == 1
+
+
 def test_record_signoff_invalid_decision(tmp_dirs):
     memos, _ = tmp_dirs
     chair.save_memo(chair.SaveMemoInput(ticker="AAPL", rating="Hold", thesis="t", kill_criteria="k", memo_markdown="# m"))
