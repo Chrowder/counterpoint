@@ -25,6 +25,10 @@ from thenvoi_rest import (
 
 from band.config import load_agent_config
 from counterpoint.config import platform_urls
+from counterpoint.i18n import pick
+
+# 发起消息按 OUTPUT_LANG;文本里的 @Chair 是给人看的,路由靠 mentions 参数
+_TRIGGER = {"zh": "@Chair 研究 {ticker}", "en": "@Chair research {ticker}"}
 
 # 房主/发起方 + 要拉进房间的其余 agent(都在同一 Band 账号下,互为兄弟)
 INITIATOR = "data_steward"
@@ -75,7 +79,7 @@ def start_research(ticker: str) -> str:
     c.agent_api_messages.create_agent_chat_message(
         room_id,
         message=ChatMessageRequest(
-            content=f"@Chair 研究 {ticker}",
+            content=pick(_TRIGGER).format(ticker=ticker),
             mentions=[ChatMessageRequestMentionsItem(id=chair_id, handle="Chair")],
         ),
     )

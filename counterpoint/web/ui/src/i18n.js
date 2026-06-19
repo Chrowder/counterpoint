@@ -3,6 +3,7 @@
 // 不依赖后端返回的文案(后端文案只供非 UI 消费方/回退)。
 const STR = {
   zh: {
+    doc_title: 'Counterpoint · 对抗式投研台',
     brand_sub: '对抗式投研台',
     ticker_company: '多空跨模型对抗 · 人工签字',
     search_placeholder: '输入股票代码,如 AAPL / NVDA / TSLA',
@@ -63,6 +64,7 @@ const STR = {
     'agent.signed': '人类',
   },
   en: {
+    doc_title: 'Counterpoint · Adversarial Research Desk',
     brand_sub: 'Adversarial Research Desk',
     ticker_company: 'Cross-model bull/bear · human sign-off',
     search_placeholder: 'Enter a ticker, e.g. AAPL / NVDA / TSLA',

@@ -123,6 +123,7 @@ export default function App() {
   }
 
   useEffect(() => stop, [])
+  useEffect(() => { document.title = t('doc_title') }, [lang])  // 标签页标题随 UI 语言
 
   const showSignoff = result.found && !result.signed
   return (
