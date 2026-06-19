@@ -2,6 +2,8 @@
 
 > 🌐 **English** (current) · [中文](README.zh.md)
 
+> **🔗 About the live demo:** the deployed site is a **static snapshot of one recorded NVDA research run** — it replays that single session in your browser, with no backend, no live agents, and no API calls. It's a showcase, not a working desk. To actually research any ticker, clone this repo and configure your own API keys (Anthropic + a second model family + Finnhub + Band) — see [Setup](#setup) and [Running](#running) below.
+
 An adversarial bull/bear research system: multiple agents collaborate through [Band](https://band.ai) (chat room + @mention) to produce a single **research memo** on a stock.
 
 > This is a research / decision-support tool, **not a trading system**: it places no orders and gives no buy/sell instructions; a human signs off at the end. For education and research only.
