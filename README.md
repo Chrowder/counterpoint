@@ -1,5 +1,7 @@
 # Counterpoint
 
+> 🌐 **中文**(当前) · [English](README.en.md)
+
 对抗式多空投研系统:多个 agent 通过 [Band](https://band.ai)(chat room + @mention)协作,对一只股票产出一份**研究备忘录**。
 
 > 这是研究/决策支持工具,**不是交易系统**:不下单、不给买卖指令,最终人类签字。仅供教育研究。
@@ -109,6 +111,20 @@ uv run python -m counterpoint.agents.echo
 ```
 
 房间里 `@Echo Probe hello pipeline`,回 `echo: ...` 即通。
+
+## 语言(中英双语)
+
+产出语言是一个**配置轴**,不是分支:同一套代码,改 `.env` 切换,默认中文。
+
+```bash
+OUTPUT_LANG=en ./scripts/run_desk.sh    # 起一个英文台:备忘录/辩论/证据包全英文
+```
+
+`OUTPUT_LANG=zh|en` 决定备忘录、多空辩论、证据包、工具描述的语言;换语言只改 `.env`、不改代码。
+一次只能一种语言(5 个 agent 同一 Band 账号一套)。跨运行记忆按语言隔离——英文台只回放英文往期记录,不会把中文旧结论喂给 Chair(防锚定/混语)。
+
+**Web 界面语言独立于 `OUTPUT_LANG`**:界面右上角 `EN/中` 按钮即时切换(或 `?lang=en`),
+所以可以「英文台 + 中文界面」或反之。实现见 `counterpoint/i18n.py`(产出层)与 `web/ui/src/i18n.js`(界面层)。
 
 ## 目录结构
 

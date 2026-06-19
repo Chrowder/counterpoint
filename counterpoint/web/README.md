@@ -1,6 +1,10 @@
 # Counterpoint Web 前端(web-frontend 分支)
 
+> 🌐 **中文**(当前) · [English](README.en.md)
+
 网页输入股票代码 → 后台自动在 Band 建房间、拉 5 个 agent、发起研究 → 轮询展示研究备忘录 → 网页签字 → 用完清场。
+
+> **界面语言**:右上角 `EN/中` 即时切换(或 `?lang=en`),独立于后端 `OUTPUT_LANG`(备忘录产出语言)。实现见 `ui/src/i18n.js`。
 
 ## 架构
 

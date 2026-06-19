@@ -28,6 +28,7 @@
 - band-sdk 1.0.0 的 Agent.create 不读 THENVOI_* 环境变量,平台 URL 要显式传参(counterpoint/config.py 的 platform_urls() 统一处理)。
 - 5 个 agent 建在**同一 Band 账号**下(兄弟 agent,无需联系人即可互 @/互拉)。本地/单机跑。
 - 配置两文件:`.env`(THENVOI_REST_URL/THENVOI_WS_URL + LLM key + 角色模型路由 BULL_MODEL/BEAR_MODEL…);`agent_config.yaml`(每 agent 的 agent_id+api_key,用 load_agent_config("bull") 取)。两文件都进 .gitignore,只提交 .example。换模型走 env,不改代码。
+- 中英双语是**配置轴不是分支**:`OUTPUT_LANG=zh|en`(默认 zh)决定备忘录/辩论/证据包/工具描述的语言,换语言改 env、不改代码。产出层走 `counterpoint/i18n.py`(`output_lang()`/`pick({"zh","en"})`),各 agent prompt / chair 工具描述与节标题 / evidence 字段标签 / memory 脚手架都按它切;zh 是基线,en 缺失回落 zh。跨运行记忆按 lang 隔离(savememo 记 `lang`,recall 只回放同语言,旧记录无 lang 视为 zh)。Web UI 语言**独立**于 OUTPUT_LANG,走 `web/ui/src/i18n.js`(`?lang`/localStorage + 右上角切换),阶段标题前端按 stage.key 映射。文档英文版 `README.en.md`/`web/README.en.md`,与中文版顶部互挂。一次只能跑一种语言的台。
 
 ## 里程碑与 Done 标准
 - M0 管道:echo agent 进房间,我能 @它它能回 → 通。✅
