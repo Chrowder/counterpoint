@@ -15,3 +15,18 @@ def test_extract_skips_stopwords():
 
 def test_extract_none_when_no_ticker():
     assert ds.extract_ticker("研究苹果公司") is None
+
+
+def test_only_chair_or_human_triggers_dispatch():
+    # Chair(agent)放行
+    assert ds.is_research_requester("Agent", "Chair") is True
+    # 人类(User/其它非 agent 类型)放行
+    assert ds.is_research_requester("User", "Chrowder") is True
+    assert ds.is_research_requester("Human", "Someone") is True
+    # 其它 agent(Bull/Bear/Risk)误 @ → 挡掉
+    assert ds.is_research_requester("Agent", "Bear") is False
+    assert ds.is_research_requester("Agent", "Bull") is False
+    assert ds.is_research_requester("Agent", "Risk Officer") is False
+    # 大小写容错;sender_type 缺失时按非 agent(人类)放行,宁松勿误杀真人请求
+    assert ds.is_research_requester("agent", "Bear") is False
+    assert ds.is_research_requester(None, None) is True

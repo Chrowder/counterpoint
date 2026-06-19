@@ -74,6 +74,18 @@ def extract_ticker(content: str) -> str | None:
     return None
 
 
+def is_research_requester(sender_type: str | None, sender_name: str | None) -> bool:
+    """只有 Chair 或人类才能触发取证;其它 agent(Bull/Bear/Risk)的 @一律忽略。
+
+    Data Steward 是「被 @就分发」的无状态 agent。开源模型(DeepSeek 等)遵从度不稳,
+    Bear 常把 @Data Steward 一并带进 mentions(本该只 @Chair),会重复拉 Finnhub、
+    重发 Evidence Pack。分析师无权重新触发取证,故按发送者身份在源头挡掉。
+    """
+    if (sender_name or "").strip() == "Chair":
+        return True
+    return (sender_type or "").strip().lower() != "agent"  # 非 agent(人类 User)放行
+
+
 def find_stub(content: str) -> tuple[str, str] | None:
     """stub 模式:匹配 data/evidence/<TICKER>.stub.md。"""
     for f in sorted(EVIDENCE_DIR.glob("*.stub.md")):
@@ -94,6 +106,12 @@ class EvidenceAdapter(SimpleAdapter):
 
     async def on_message(self, msg, tools, history, participants_msg, contacts_msg,
                          *, is_session_bootstrap, room_id) -> None:
+        # 只认 Chair/人类的取证请求,挡掉 Bull/Bear/Risk 的误 @(开源模型乱 mention 会重复触发)
+        if not is_research_requester(getattr(msg, "sender_type", None), msg.sender_name):
+            logging.info("忽略 %s(%s)的消息:只认 Chair/人类的取证请求",
+                         msg.sender_name, getattr(msg, "sender_type", None))
+            return
+
         source = os.getenv("DATA_SOURCE", "finnhub").lower()
         requester = msg.sender_name or "Chair"
         m = pick(_MSG)
