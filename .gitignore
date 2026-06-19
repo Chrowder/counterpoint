@@ -12,3 +12,6 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# 个人草稿笔记,不进版本控制
+note.md
