@@ -41,6 +41,7 @@ const STR = {
     // Memo
     memo_title: '研究备忘录',
     memo_rating: '评级 {rating}',
+    memo_download: '下载 Markdown',
     memo_empty: '研究进行中…多空盲评 → 反驳 → 风险压测 → 综合,约需数分钟。',
     // RoomStream
     room_title: 'Band 房间直播',
@@ -97,6 +98,7 @@ const STR = {
     st_pending: 'Pending',
     memo_title: 'Research Memo',
     memo_rating: 'Rating {rating}',
+    memo_download: 'Download .md',
     memo_empty: 'Research in progress… blind review → rebuttal → risk stress-test → synthesis, ~a few minutes.',
     room_title: 'Band Room Live',
     room_count: '{n} msgs',
