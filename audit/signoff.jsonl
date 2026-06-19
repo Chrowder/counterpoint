@@ -8,3 +8,5 @@
 {"ts": "2026-06-16T00:42:47", "event": "signed", "ticker": "AMD", "memo_file": "AMD-2026-06-16.md", "decision": "APPROVE", "signer": "Chrowder Chen", "comments": ""}
 {"ts": "2026-06-17T22:51:43", "event": "memo_created", "ticker": "MSFT", "memo_file": "MSFT-2026-06-17.md", "rating": "Hold"}
 {"ts": "2026-06-17T22:53:55", "event": "signed", "ticker": "MSFT", "memo_file": "MSFT-2026-06-17.md", "decision": "APPROVE", "signer": "Chrowder Chen", "comments": ""}
+{"ts": "2026-06-18T19:36:19", "event": "memo_created", "ticker": "TSLA", "memo_file": "TSLA-2026-06-18.md", "rating": "Hold", "summary": "毛利率逐季改善(16.3%→21.1%[E5])与净利率原地踏步(2.1%→2.1%[E5])并存,385倍P/E[E7]缺乏Evidence Pack内的FSD/Robotaxi盈利模型支撑,多空在同一组数据上得出相反结论且互不说服,故Hold。关键改判条件:①若2026Q2营收环比续降+营业利润率续降至2-3% → 转向Underweight;②若2026Q2净利率回升并稳定在3%+/EPS>0.45 → 转向Overweight。"}
+{"ts": "2026-06-18T21:12:44", "event": "signed", "ticker": "TSLA", "memo_file": "TSLA-2026-06-18.md", "decision": "APPROVE", "signer": "Chrowder Chen", "comments": ""}
