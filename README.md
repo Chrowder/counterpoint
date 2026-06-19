@@ -1,151 +1,152 @@
 # Counterpoint
 
-> 🌐 **中文**(当前) · [English](README.en.md)
+> 🌐 **English** (current) · [中文](README.zh.md)
 
-对抗式多空投研系统:多个 agent 通过 [Band](https://band.ai)(chat room + @mention)协作,对一只股票产出一份**研究备忘录**。
+An adversarial bull/bear research system: multiple agents collaborate through [Band](https://band.ai) (chat room + @mention) to produce a single **research memo** on a stock.
 
-> 这是研究/决策支持工具,**不是交易系统**:不下单、不给买卖指令,最终人类签字。仅供教育研究。
+> This is a research / decision-support tool, **not a trading system**: it places no orders and gives no buy/sell instructions; a human signs off at the end. For education and research only.
 
-## 项目状态
+## Project status
 
-全部规划里程碑完成,5-agent 架构与 6 条硬性约束全部落地,已用 AAPL / AMD / TSLA 真实数据端到端验证。
+All planned milestones are complete; the 5-agent architecture and 6 hard constraints are fully in place, validated end-to-end on real AAPL / AMD / TSLA data.
 
-**里程碑**
+**Milestones**
 
-| 里程碑 | 交付 |
+| Milestone | Delivered |
 |---|---|
-| M0 管道 | echo agent 验证 Band 链路 @mention 往返 |
-| M1 闭环 | Data(stub)+ Bull + Chair 顺序跑通,产出首份 markdown 备忘录 |
-| M2 对抗 | Bear 跨模型(featherless/DeepSeek)+ 并行盲评 + 交换反驳 + 双边备忘录 |
-| M3 签字门 | 人工 APPROVE/REJECT/REVISE + 备忘录签字区块 + `audit/signoff.jsonl` 留痕 |
-| M5 真实数据 | Finnhub 真实证据(概况/基本面/估值/卖方/新闻),失败中止不造假 |
-| M4 风险压测 | Risk Officer 红队:证据盲区排序 + 改判条件 + 可靠性定级 |
-| M6 证据深化 | 加 EPS 与营收/利润率逐季趋势(SEC 10-Q 去累计),填补单点快照盲区 |
-| M7 跨运行记忆 | 重研究同一 ticker 时,Chair recall 本台往期评级/签字/论点,备忘录加「往期对比」(只喂 Chair,防锚定) |
-| M8 复盘 | Chair 用本轮真实数据逐条检查上次的改判条件(kill criteria)兑现没,备忘录加「往期对比与复盘」,把两次分析连成可检验判断链 |
-| 质量加固 | 五档评级结构化校验;Bear resync 死循环看门狗自愈;`tests/` 纯函数单测(`uv run pytest`) |
+| M0 Pipeline | echo agent validates the Band @mention round-trip |
+| M1 Loop | Data (stub) + Bull + Chair run in sequence, producing the first markdown memo |
+| M2 Adversarial | Bear on a cross-model family (featherless/DeepSeek) + parallel blind review + rebuttal exchange + two-sided memo |
+| M3 Sign-off gate | human APPROVE/REJECT/REVISE + memo sign-off block + `audit/signoff.jsonl` trail |
+| M5 Real data | Finnhub real evidence (overview/fundamentals/valuation/sell-side/news); aborts on failure, never fabricates |
+| M4 Risk stress-test | Risk Officer red team: ranked evidence blind spots + kill criteria + reliability rating |
+| M6 Evidence depth | adds quarterly EPS and revenue/margin trends (SEC 10-Q de-cumulated), filling the single-snapshot blind spot |
+| M7 Cross-run memory | when re-researching the same ticker, Chair recalls this desk's prior rating/sign-off/thesis, adding a "Prior Comparison" section (fed only to Chair, to prevent anchoring) |
+| M8 Reflection | Chair checks last run's kill criteria against this round's real data one by one, adding "Prior Comparison & Reflection" — linking two analyses into a verifiable chain |
+| Hardening | structured validation of the five-tier rating; self-healing watchdog for Bear's resync loop; pure-function unit tests in `tests/` (`uv run pytest`) |
 
-**6 条硬性约束的落地**
+**How the 6 hard constraints land**
 
-1. 协调层是 Band(全程 @mention 路由,无进程内调用) · 2. Bull/Bear 跨模型家族对抗 ·
-3. 并行盲评(同条消息 @Bull @Bear,Band 可见性天然隔离) · 4. 论断接地到 Evidence Pack、真实数据零编造 ·
-5. 人工签字门 + 审计留痕 · 6. 不实现下单,密钥只进 `.env`/`agent_config.yaml`。
+1. The coordination layer is Band (@mention routing throughout, no in-process calls) · 2. Bull/Bear adversarial across model families ·
+3. Parallel blind review (one message @Bull @Bear, isolated naturally by Band visibility) · 4. Claims grounded in the Evidence Pack, zero fabrication on real data ·
+5. Human sign-off gate + audit trail · 6. No order execution; secrets live only in `.env`/`agent_config.yaml`.
 
-## Agent 职责
+## Agent roles
 
-| Agent | 职责 | 状态 |
+| Agent | Role | Status |
 |---|---|---|
-| Echo Probe | M0 管道探针:@它它原样回,验证 Band 链路 | ✅ M0 |
-| Data Steward | 确定性产出 Evidence Pack(无 LLM,零编造):Finnhub 真实数据 / stub 回退,同一条消息 @Bull @Bear = 并行盲评 | ✅ M1·M5 |
-| Bull | 多头研究员(Anthropic 家族),盲评立论 + 逐点反驳,论断必须引用证据编号 | ✅ M1 |
-| Bear | 空头研究员(**非 Anthropic 家族**,经 featherless/OpenAI 兼容端点),与 Bull 跨模型对抗 | ✅ M2 |
-| Risk Officer | 非方向性红队:压测辩论质量与证据盲区,给改判条件 + 可靠性定级(Anthropic haiku) | ✅ M4 |
-| Chair (PM) | 状态机主持:等齐盲评 → 交换反驳 → 唤醒压测 → 综合双边备忘录 → 守人工签字门 | ✅ M1 |
+| Echo Probe | M0 pipeline probe: @it and it echoes back, validating the Band link | ✅ M0 |
+| Data Steward | Deterministically produces the Evidence Pack (no LLM, zero fabrication): Finnhub real data / stub fallback; one message @Bull @Bear = parallel blind review | ✅ M1·M5 |
+| Bull | Bull researcher (Anthropic family): blind-review thesis + point-by-point rebuttal; every claim must cite an evidence id | ✅ M1 |
+| Bear | Bear researcher (**non-Anthropic family**, via featherless/OpenAI-compatible endpoint), adversarial across models vs. Bull | ✅ M2 |
+| Risk Officer | Non-directional red team: stress-tests debate quality and evidence blind spots, gives kill criteria + reliability rating (Anthropic haiku) | ✅ M4 |
+| Chair (PM) | Runs the state machine: collect blind reviews → exchange rebuttals → wake the stress-test → synthesize the two-sided memo → guard the human sign-off gate | ✅ M1 |
 
-流程(M4 实现):
+Flow (as of M4):
 
 ```
-人类 @Chair 研究 X → Chair @Data Steward → Data 贴 Evidence Pack @Bull @Bear @Chair
-→ Bull/Bear 并行盲评(Band 可见性保证互相看不到)→ 各自 @Chair 交初论
-→ Chair 收齐后转发对方全文,同一条消息 @Bull @Bear 要求逐点反驳(并行)
-→ 收齐反驳 → Chair 转发【证据+完整辩论】@Risk Officer 压测 → Risk @Chair 出压测报告
-→ Chair 综合写备忘录(savememo 落盘 memos/)→ 贴回房间 + 请求签字
-→ 人类回复 APPROVE / REJECT / REVISE → Chair recordsignoff 留痕(备忘录追加签字区块 + audit/signoff.jsonl)
+Human @Chair research X → Chair @Data Steward → Data posts the Evidence Pack @Bull @Bear @Chair
+→ Bull/Bear blind-review in parallel (Band visibility guarantees they can't see each other) → each @Chair with an opening case
+→ Chair, once both are in, forwards the other's full text and, in one message @Bull @Bear, asks for a point-by-point rebuttal (in parallel)
+→ both rebuttals in → Chair forwards [evidence + full debate] @Risk Officer to stress-test → Risk @Chair with the report
+→ Chair synthesizes the memo (savememo to memos/) → posts it back + requests sign-off
+→ Human replies APPROVE / REJECT / REVISE → Chair recordsignoff for the trail (memo sign-off block + audit/signoff.jsonl)
 ```
 
-> 盲评和交换为什么这样做:Band 里 agent 只能看到 @自己的消息——这天然保证了盲评
-> (Bull/Bear 互不可见),也意味着交换阶段必须由 Chair 完整转发对方原文。
-> 跨模型对抗(硬性约束):Bull 走 Anthropic,Bear 走 .env 配置的其他家族,换模型只改 .env。
+> Why blind review and exchange work this way: in Band an agent only sees messages that @it — this naturally guarantees blind review
+> (Bull/Bear can't see each other), and it means the exchange phase must have Chair forward the other side's full original text.
+> Cross-model adversarial (hard constraint): Bull runs on Anthropic, Bear on another family configured in `.env`; switching models only edits `.env`.
 
-## 环境准备
+## Language (bilingual zh/en)
 
-1. **Band 账号**:在 [app.band.ai](https://app.band.ai) 免费注册(无需信用卡)。
-2. **注册 agent**:Agents → New Agent → 选 **External Agent**。M0 只需要建一个,命名 `Echo Probe`(别叫 Assistant/Bot 这类词,会干扰路由)。创建弹窗里的 **API Key 只显示一次**,立刻复制;Agent UUID 在该 agent 设置页右下角。
-3. **建房间**:Chats → 新建房间 **Counterpoint Desk**,从参与者面板把 Echo Probe 加进去。
-4. **本地配置**:
+Output language is a **config axis**, not a branch: one codebase, switched via `.env`, **defaulting to English on this branch**.
 
 ```bash
-cp .env.example .env                              # 填 ANTHROPIC_API_KEY
-cp agent_config.yaml.example agent_config.yaml    # 填 echo 的 agent_id + api_key
+OUTPUT_LANG=zh ./scripts/run_desk.sh    # start a Chinese desk: memo / debate / evidence pack all in Chinese
 ```
 
-`.env` 和 `agent_config.yaml` 含真实密钥,已在 .gitignore 里,绝不提交。
+`OUTPUT_LANG=en|zh` (default en) controls the language of the memo, the bull/bear debate, the Evidence Pack, and the tool descriptions; switching only edits `.env`, never code.
+Only one language at a time (the 5 agents share one Band account). Cross-run memory is isolated by language — an English desk replays only English prior records, never feeding old Chinese conclusions to Chair (avoiding anchoring / mixed-language pollution).
 
-## 运行
+**The web UI language is independent of `OUTPUT_LANG`**: the `EN/中` button at the top right toggles instantly (or `?lang=en`),
+so you can run "English desk + Chinese UI" or vice versa. See `counterpoint/i18n.py` (output layer) and `web/ui/src/i18n.js` (UI layer).
 
-前置:在 Band 上注册 **Data Steward**、**Bull**、**Bear**、**Risk Officer**、**Chair** 五个 External Agent(名字照抄,@mention 按名字路由),凭据填进 `agent_config.yaml` 对应块,全部加进 Counterpoint Desk 房间;`.env` 填 `ANTHROPIC_API_KEY`、`FEATHERLESS_API_KEY`、`BEAR_MODEL`、`RISK_MODEL`,以及真实数据用的 `FINNHUB_API_KEY`([finnhub.io](https://finnhub.io) 免费注册)。
+## Setup
 
-> **数据源**:`DATA_SOURCE=finnhub`(默认)拉真实数据;拉取失败/ticker 无效时 Data Steward
-> 报错中止、**不退回假数据**。离线或额度耗尽时可临时设 `DATA_SOURCE=stub` 用 `data/evidence/*.stub.md`。
-> 真实 pack 每次拉取会快照到 `data/evidence/<TICKER>-<日期>.md` 留痕。
+1. **Band account**: register free at [app.band.ai](https://app.band.ai) (no credit card).
+2. **Register an agent**: Agents → New Agent → choose **External Agent**. M0 needs just one, named `Echo Probe` (don't use words like Assistant/Bot — they interfere with routing). The **API Key is shown only once** in the creation dialog — copy it immediately; the Agent UUID is at the bottom-right of that agent's settings page.
+3. **Create the room**: Chats → new room **Counterpoint Desk**, add Echo Probe from the participants panel.
+4. **Local config**:
+
+```bash
+cp .env.example .env                              # fill in ANTHROPIC_API_KEY
+cp agent_config.yaml.example agent_config.yaml    # fill in echo's agent_id + api_key
+```
+
+`.env` and `agent_config.yaml` hold real secrets, are in .gitignore, and are never committed.
+
+## Running
+
+Prerequisite: register five External Agents on Band — **Data Steward**, **Bull**, **Bear**, **Risk Officer**, **Chair** (copy the names exactly; @mention routes by name) — put their credentials in the matching blocks of `agent_config.yaml`, add them all to the Counterpoint Desk room; fill `.env` with `ANTHROPIC_API_KEY`, `FEATHERLESS_API_KEY`, `BEAR_MODEL`, `RISK_MODEL`, plus `FINNHUB_API_KEY` for real data (free at [finnhub.io](https://finnhub.io)).
+
+> **Data source**: `DATA_SOURCE=finnhub` (default) pulls real data; on fetch failure / invalid ticker the Data Steward
+> aborts with an error and **does not fall back to fake data**. Offline or out of quota, you can temporarily set `DATA_SOURCE=stub` to use `data/evidence/*.stub.md`.
+> Each real pack is snapshotted to `data/evidence/<TICKER>-<date>.md` for the trail.
 >
-> Evidence Pack 含:概况 / 基本面(TTM)/ **盈利与财报逐季趋势**(近 4 季 EPS 实际vs预期、
-> 营收与单季利润率,后者从 SEC 10-Q 去累计而来)/ 估值 / 卖方评级 / 标题点名公司的新闻。
-> 付费端点(目标价、盈利预期、新闻情绪)免费档不可用,未接入。
+> The Evidence Pack contains: overview / fundamentals (TTM) / **quarterly earnings & financials trends** (last 4 quarters of EPS actual-vs-estimate,
+> revenue and single-quarter margins, the latter de-cumulated from SEC 10-Q) / valuation / sell-side ratings / news whose headline names the company.
+> Paid endpoints (price target, EPS estimates, news sentiment) are unavailable on the free tier and not integrated.
 
 ```bash
 uv sync
-./scripts/run_desk.sh        # 一键拉起 5 个 agent,Ctrl+C 全部退出
+./scripts/run_desk.sh        # bring up all 5 agents at once; Ctrl+C exits them all
 ```
 
-然后在房间里发:
+Then post in the room:
 
 ```
-@Chair 研究 AAPL
+@Chair research AAPL
 ```
 
-自动走完整条链,最终 Chair 在房间贴出备忘录(落盘 `memos/AAPL-<日期>.md`)并请求签字。
-你在房间回复决定即过签字门:
+It runs the whole chain automatically; finally Chair posts the memo in the room (saved to `memos/AAPL-<date>.md`) and requests sign-off.
+Reply with your decision in the room to pass the gate:
 
 ```
-@Chair APPROVE 同意结论,但需持续监控 E7/E8 监管风险
+@Chair APPROVE agree with the conclusion, but keep monitoring the E7/E8 regulatory risk
 ```
 
-决定为 `APPROVE` / `REJECT` / `REVISE` 之一。Chair 会把签字记录追加到备忘录文件,并向
-`audit/signoff.jsonl` 追加一行(append-only)。提交这两者到 git 即形成防篡改的审计时间线。
+The decision must be one of `APPROVE` / `REJECT` / `REVISE`. Chair appends the sign-off record to the memo file and adds one line to
+`audit/signoff.jsonl` (append-only). Committing both to git forms a tamper-evident audit timeline.
 
-### 运行 M0(管道探针)
+### Running M0 (pipeline probe)
 
 ```bash
 uv run python -m counterpoint.agents.echo
 ```
 
-房间里 `@Echo Probe hello pipeline`,回 `echo: ...` 即通。
+In the room, `@Echo Probe hello pipeline` should come back as `echo: ...`.
 
-## 语言(中英双语)
-
-产出语言是一个**配置轴**,不是分支:同一套代码,改 `.env` 切换,**本分支默认英文**。
-
-```bash
-OUTPUT_LANG=zh ./scripts/run_desk.sh    # 起一个中文台:备忘录/辩论/证据包全中文
-```
-
-`OUTPUT_LANG=en|zh`(默认 en)决定备忘录、多空辩论、证据包、工具描述的语言;换语言只改 `.env`、不改代码。
-一次只能一种语言(5 个 agent 同一 Band 账号一套)。跨运行记忆按语言隔离——英文台只回放英文往期记录,不会把中文旧结论喂给 Chair(防锚定/混语)。
-
-**Web 界面语言独立于 `OUTPUT_LANG`**:界面右上角 `EN/中` 按钮即时切换(或 `?lang=en`),
-所以可以「英文台 + 中文界面」或反之。实现见 `counterpoint/i18n.py`(产出层)与 `web/ui/src/i18n.js`(界面层)。
-
-## 目录结构
+## Directory layout
 
 ```
 counterpoint/
-├── config.py              # .env 读取 + 角色→provider/模型路由(换模型改 .env 不改代码)
-├── runner.py              # 公共启动逻辑(凭据→Agent.create→监听)
-├── evidence.py            # Finnhub 真实数据 → 确定性格式化 Evidence Pack(纯函数,无 LLM);含 EPS/财报逐季趋势
-├── memory.py              # 跨运行记忆 recall:读 audit 渲染本台往期决策(只喂 Chair)
-├── supervise.py           # agent 看门狗:resync 死循环自动重启
+├── config.py              # .env reading + role→provider/model routing (switch models in .env, not code)
+├── i18n.py                # output-language switch (OUTPUT_LANG=zh|en): prompts/memo/evidence/tools
+├── runner.py              # shared startup logic (credentials→Agent.create→listen)
+├── evidence.py            # Finnhub real data → deterministically formatted Evidence Pack (pure functions, no LLM); incl. quarterly EPS/financials trends
+├── memory.py              # cross-run recall: reads audit, renders this desk's prior decisions (fed only to Chair)
+├── supervise.py           # agent watchdog: auto-restart on resync loop
 └── agents/
-    ├── echo.py            # M0 管道探针
-    ├── data_steward.py    # 确定性证据分发(SimpleAdapter,无 LLM):finnhub/stub 切换
-    ├── bull.py            # 多头研究员(Anthropic)
-    ├── bear.py            # 空头研究员(featherless 开源模型,跨家族)
-    ├── risk.py            # 风险官:反应式单发,压测辩论质量与证据盲区(haiku)
-    └── chair.py           # 主席:状态机主持 + 双边备忘录 + 风险压测节 + savememo + 签字门 recordsignoff
-tests/                     # 纯函数单测(去累计/ticker抽取/评级校验/签字),uv run pytest
-data/evidence/             # stub Evidence Pack(显著标注假数据)
-memos/                     # 备忘录输出(审计留痕,提交进库)
-audit/signoff.jsonl        # 签字门留痕(append-only,运行时生成,提交进库)
-scripts/run_desk.sh        # 一键拉起 4 个 agent
-reference/TradingAgents/   # 只读参考(辩论提示词结构),gitignored
+    ├── echo.py            # M0 pipeline probe
+    ├── data_steward.py    # deterministic evidence dispatch (SimpleAdapter, no LLM): finnhub/stub switch
+    ├── bull.py            # bull researcher (Anthropic)
+    ├── bear.py            # bear researcher (featherless open model, cross-family)
+    ├── risk.py            # risk officer: reactive single-shot, stress-tests debate quality & blind spots (haiku)
+    └── chair.py           # chair: runs the state machine + two-sided memo + risk section + savememo + recordsignoff sign-off gate
+tests/                     # pure-function unit tests (de-cumulation/ticker extraction/rating validation/sign-off), uv run pytest
+data/evidence/             # stub Evidence Packs (clearly marked as fake data)
+memos/                     # memo output (audit trail, committed)
+audit/signoff.jsonl        # sign-off gate trail (append-only, generated at runtime, committed)
+scripts/run_desk.sh        # bring up the agents at once
+reference/TradingAgents/   # read-only reference (debate prompt structure), gitignored
 ```
