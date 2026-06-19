@@ -9,6 +9,7 @@ const STR = {
     search_placeholder: '输入股票代码,如 AAPL / NVDA / TSLA',
     research: '研究',
     researching: '研究中…',
+    demo_hint: '演示模式:输入任意代码点「研究」,回放一段真实录制的研究流程(不连后端/Band)。',
     // 状态行
     starting: '正在建房间并发起研究…',
     start_failed: '发起失败:{err}',
@@ -71,6 +72,7 @@ const STR = {
     search_placeholder: 'Enter a ticker, e.g. AAPL / NVDA / TSLA',
     research: 'Research',
     researching: 'Researching…',
+    demo_hint: 'Demo mode: type any ticker and click Research to replay a real recorded session (no backend/Band).',
     starting: 'Creating room and starting research…',
     start_failed: 'Start failed: {err}',
     bad_ticker: 'Enter a 1–5 letter ticker (e.g. AAPL / MSFT), not a company name',

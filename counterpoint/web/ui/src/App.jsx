@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import * as api from './api.js'
+import * as realApi from './api.js'
+import * as demoApi from './demoApi.js'
 import { t, LANG, setLang } from './i18n.js'
+
+// 纯客户端 demo 开关:构建期 VITE_DEMO=1(Vercel 静态部署),或运行期加 ?demo=1。
+// 开启后所有 api 调用走前端 fixture 回放,不连后端/Band。
+export const DEMO = import.meta.env.VITE_DEMO === '1' || new URLSearchParams(window.location.search).has('demo')
+const api = DEMO ? demoApi : realApi
 import ScoreBar from './components/ScoreBar.jsx'
 import Timeline from './components/Timeline.jsx'
 import RoomStream from './components/RoomStream.jsx'
@@ -44,7 +50,7 @@ function Header({ ticker, lang, onToggleLang }) {
           </svg>
         </div>
         <div>
-          <div className="brand-name">Counterpoint</div>
+          <div className="brand-name">Counterpoint {DEMO && <span className="demo-badge">DEMO</span>}</div>
           <div className="brand-sub">{t('brand_sub')}</div>
         </div>
       </div>
@@ -72,7 +78,7 @@ export default function App() {
   const [signer, setSigner] = useState('')
   const [signing, setSigning] = useState(false)
   const [running, setRunning] = useState(false)  // 研究进行中:禁掉"研究"按钮,防重复建房
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState(DEMO ? t('demo_hint') : '')
   const [lang, setLangState] = useState(LANG)  // 切换语言时驱动整树重渲染
   const timer = useRef(null)
   const cleaned = useRef(false)

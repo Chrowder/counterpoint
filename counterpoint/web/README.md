@@ -49,6 +49,19 @@ a **native Band room live stream** (`/api/room` — Band sets `X-Frame-Options: 
 
 > Note: the bundled `fixtures/demo.json` is a Chinese transcript, so demo mode shows Chinese memo content regardless of the UI language. An English demo would need a re-captured English fixture.
 
+## Deploy the demo to Vercel (pure static, no backend)
+
+There is also a **client-side** demo (`ui/src/demoApi.js`) that replays the recorded session entirely in the browser — no FastAPI, no Band, no LLM, no secrets. This makes the UI deployable as a plain static site:
+
+1. Vercel → New Project → import this repo.
+2. Set **Root Directory** to `counterpoint/web/ui`.
+3. The bundled `ui/vercel.json` builds with `VITE_DEMO=1` (bakes demo mode) and serves `dist/`. Deploy.
+4. The live site runs in demo mode — a `DEMO` badge shows in the header; typing any ticker + Research replays the session.
+
+Preview demo mode locally without rebuilding: append `?demo=1` to any URL (e.g. `http://localhost:8000/?demo=1`).
+
+The **full system** (real agents + Band) can NOT run on Vercel/Streamlit Cloud: the 5 agents hold persistent WebSocket connections, a round takes minutes, and the audit trail lives on local disk — none of which serverless provides. Host the backend + `run_desk.sh` on an always-on box (a VM, Render, Railway, Fly.io, or your machine via a tunnel) and point the frontend's `api.js` at it.
+
 ## Design notes / trade-offs
 
 - **Initiator**: the Agent API has no separate "human" key, so the backend uses `data_steward`'s credentials as the room owner to initiate; the trigger message is technically sent by that agent (functionally, Chair researches as usual).
