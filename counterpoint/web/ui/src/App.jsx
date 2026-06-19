@@ -17,6 +17,14 @@ const EMPTY_STAGES = [
   { step: 6, key: 'signed', status: 'pending' },
 ]
 
+// 把当前 ticker 写进 URL(?ticker=),刷新后可恢复;不动其它查询参数
+function setUrlTicker(tk) {
+  const u = new URL(window.location)
+  if (tk) u.searchParams.set('ticker', tk)
+  else u.searchParams.delete('ticker')
+  window.history.replaceState(null, '', u)
+}
+
 function LangToggle({ lang, onToggle }) {
   return (
     <button className="lang-toggle" onClick={onToggle} title="中文 / English">
@@ -110,6 +118,21 @@ export default function App() {
     if (res && res.ok === false) {
       setStatus(t('start_failed', { err: res.error || '' })); setTicker(null); busy.current = false; setRunning(false); return
     }
+    setUrlTicker(tk)  // 写进 URL,刷新可恢复
+    stop(); timer.current = setInterval(() => tick(tk), 5000); tick(tk)
+  }
+
+  // 刷新/直达恢复:先探该轮是否在跑(有房间消息)或已完成(有结果),是才接管轮询,
+  // 避免对一个并未发起的 ticker 卡在"研究中"。仅预填则只填输入框、不锁定。
+  async function resume(tk) {
+    const [res, room] = await Promise.all([
+      api.getResult(tk).catch(() => null),
+      api.getRoom(tk).catch(() => null),
+    ])
+    setInput(tk)
+    const active = (res && res.found) || (room?.messages?.length)
+    if (!active) return
+    setTicker(tk); busy.current = true; setRunning(true); cleaned.current = false; setSigning(false)
     stop(); timer.current = setInterval(() => tick(tk), 5000); tick(tk)
   }
 
@@ -124,6 +147,10 @@ export default function App() {
 
   useEffect(() => stop, [])
   useEffect(() => { document.title = t('doc_title') }, [lang])  // 标签页标题随 UI 语言
+  useEffect(() => {  // 挂载时按 URL 的 ?ticker 恢复(只跑一次)
+    const tk = (new URLSearchParams(window.location.search).get('ticker') || '').trim().toUpperCase()
+    if (/^[A-Z]{1,5}$/.test(tk)) resume(tk)
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const showSignoff = result.found && !result.signed
   return (
